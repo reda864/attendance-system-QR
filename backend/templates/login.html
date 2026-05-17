@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Attendance — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --accent:    #2f81f7;
+      --accent-h:  #1f6feb;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --error-bg:  #3d1c1c;
+      --error-txt: #f97583;
+      --success-bg:#1c3d2e;
+      --success-txt:#3fb950;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+    }
+
+    /* ── animated background grid ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(47,129,247,.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47,129,247,.07) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 2.5rem 2.25rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, var(--accent), #6e40c9);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+    }
+
+    .logo-text { font-size: 1.25rem; font-weight: 700; }
+    .logo-sub  { font-size: .75rem; color: var(--muted); margin-top: 1px; }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: .4rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .field {
+      margin-bottom: 1.1rem;
+    }
+
+    label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: .4rem;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    input {
+      width: 100%;
+      padding: .65rem .85rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(47,129,247,.2);
+    }
+
+    input::placeholder { color: var(--muted); }
+
+    .btn {
+      width: 100%;
+      padding: .72rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .97rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: .5rem;
+      transition: background .2s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+    }
+
+    .btn:hover  { background: var(--accent-h); }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: none;
+    }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-label { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .alert {
+      display: none;
+      padding: .7rem 1rem;
+      border-radius: 8px;
+      font-size: .88rem;
+      margin-top: 1rem;
+    }
+
+    .alert.error {
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+      background: var(--error-bg);
+      color: var(--error-txt);
+      border: 1px solid rgba(249,117,131,.25);
+    }
+
+    .alert.success {
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+      background: var(--success-bg);
+      color: var(--success-txt);
+      border: 1px solid rgba(63,185,80,.25);
+    }
+
+    .footer-note {
+      margin-top: 1.6rem;
+      text-align: center;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: .18rem .55rem;
+      border-radius: 12px;
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .role-admin   { background: #2f2041; color: #d2a8ff; }
+    .role-teacher { background: #1a2f4b; color: #79c0ff; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">📋</div>
+      <div>
+        <div class="logo-text">QR Attendance</div>
+        <div class="logo-sub">Student Management System</div>
+      </div>
+    </div>
+
+    <h1>Welcome back</h1>
+    <p class="subtitle">Sign in to your account to continue</p>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">Email address</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <button type="submit" class="btn" id="loginBtn">
+        <span class="btn-label">Sign in</span>
+        <span class="spinner"></span>
+      </button>
+
+      <div class="alert" id="alert"></div>
+    </form>
+
+    <p class="footer-note">QR Attendance &copy; 2025 — Secure &amp; Private</p>
+  </div>
+
+  <script src="/api.js"></script>
+  <script>
+    // If already logged in, redirect immediately
+    if (API.getToken()) {
+      const u = localStorage.getItem('current_user');
+      if (u) {
+        try {
+          const user = JSON.parse(u);
+          window.location.href = user.role === 'admin' ? '/admin-ui/' : '/teacher/';
+        } catch {}
+      }
+    }
+
+    const form    = document.getElementById('loginForm');
+    const btn     = document.getElementById('loginBtn');
+    const alertEl = document.getElementById('alert');
+
+    function showAlert(msg, type = 'error') {
+      alertEl.className = `alert ${type}`;
+      alertEl.innerHTML = `<span>${type === 'error' ? '⚠️' : '✅'}</span><span>${msg}</span>`;
+    }
+
+    function setLoading(loading) {
+      btn.disabled = loading;
+      btn.classList.toggle('loading', loading);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertEl.className = 'alert';   // hide
+
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showAlert('Please fill in both fields.');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await API.login(email, password);
+        const role = data.user?.role;
+
+        showAlert(`Welcome, ${data.user?.first_name || email}! Redirecting…`, 'success');
+
+        setTimeout(() => {
+          if (role === 'admin') {
+            window.location.href = '/admin-ui/';
+          } else if (role === 'teacher') {
+            window.location.href = '/teacher/';
+          } else {
+            window.location.href = '/student/';
+          }
+        }, 600);
+      } catch (err) {
+        showAlert(err.message || 'Invalid credentials. Please try again.');
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

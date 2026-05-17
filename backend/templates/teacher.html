@@ -1,0 +1,1715 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Teacher Dashboard — QR Attendance</title>
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            :root {
+                --bg: #0d1117;
+                --surface: #161b22;
+                --surface2: #1c2230;
+                --border: #30363d;
+                --accent: #2f81f7;
+                --accent-h: #1f6feb;
+                --text: #e6edf3;
+                --muted: #8b949e;
+                --green: #3fb950;
+                --red: #f97583;
+                --yellow: #e3b341;
+                --orange: #f0883e;
+                --purple: #d2a8ff;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* ── NAV ── */
+            nav {
+                background: var(--surface);
+                border-bottom: 1px solid var(--border);
+                padding: 0 1.5rem;
+                height: 58px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                flex-shrink: 0;
+            }
+
+            .nav-brand {
+                display: flex;
+                align-items: center;
+                gap: 0.6rem;
+                font-weight: 700;
+                font-size: 1.05rem;
+            }
+
+            .nav-brand-icon {
+                width: 34px;
+                height: 34px;
+                background: linear-gradient(135deg, var(--accent), #6e40c9);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1rem;
+            }
+
+            .nav-right {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .user-pill {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                background: var(--surface2);
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                padding: 0.3rem 0.9rem 0.3rem 0.45rem;
+                font-size: 0.85rem;
+            }
+
+            .user-avatar {
+                width: 26px;
+                height: 26px;
+                background: linear-gradient(135deg, var(--accent), #6e40c9);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.75rem;
+                font-weight: 700;
+            }
+
+            .badge {
+                display: inline-block;
+                padding: 0.15rem 0.5rem;
+                border-radius: 10px;
+                font-size: 0.7rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            .badge-teacher {
+                background: #1a2f4b;
+                color: #79c0ff;
+            }
+            .badge-present {
+                background: #1c3d2e;
+                color: var(--green);
+            }
+            .badge-live {
+                background: #3d1c1c;
+                color: var(--red);
+                animation: pulse 1.5s infinite;
+            }
+
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+
+            .btn-icon {
+                background: transparent;
+                border: 1px solid var(--border);
+                color: var(--text);
+                border-radius: 8px;
+                padding: 0.35rem 0.7rem;
+                cursor: pointer;
+                font-size: 0.85rem;
+                transition: background 0.15s;
+            }
+            .btn-icon:hover {
+                background: var(--surface2);
+            }
+
+            /* ── LAYOUT ── */
+            .layout {
+                display: flex;
+                flex: 1;
+                min-height: 0;
+                overflow: hidden;
+            }
+
+            /* ── SIDEBAR ── */
+            .sidebar {
+                width: 320px;
+                flex-shrink: 0;
+                background: var(--surface);
+                border-right: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            .sidebar-header {
+                padding: 1rem 1.2rem;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .sidebar-header h2 {
+                font-size: 0.95rem;
+                font-weight: 700;
+                color: var(--text);
+            }
+
+            .sidebar-content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 0.5rem 0;
+            }
+
+            /* ── COURSE CARD ── */
+            .course-item {
+                border-bottom: 1px solid var(--border);
+            }
+
+            .course-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.85rem 1.2rem;
+                cursor: pointer;
+                transition: background 0.12s;
+                gap: 0.5rem;
+            }
+
+            .course-header:hover {
+                background: var(--surface2);
+            }
+
+            .course-header.active {
+                background: rgba(47, 129, 247, 0.08);
+            }
+
+            .course-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .course-title {
+                font-weight: 600;
+                font-size: 0.9rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .course-code {
+                font-size: 0.75rem;
+                color: var(--yellow);
+                font-family: monospace;
+                margin-top: 0.15rem;
+            }
+
+            .chevron {
+                color: var(--muted);
+                font-size: 0.8rem;
+                transition: transform 0.2s;
+                flex-shrink: 0;
+            }
+
+            .course-header.active .chevron {
+                transform: rotate(90deg);
+            }
+
+            .sessions-list {
+                display: none;
+                background: var(--bg);
+                border-top: 1px solid var(--border);
+            }
+
+            .sessions-list.open {
+                display: block;
+            }
+
+            .sessions-list-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.6rem 1.2rem;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .sessions-list-header span {
+                font-size: 0.75rem;
+                color: var(--muted);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                font-weight: 600;
+            }
+
+            .session-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.6rem 1.2rem;
+                border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+                cursor: pointer;
+                transition: background 0.12s;
+                gap: 0.5rem;
+            }
+
+            .session-item:last-child {
+                border-bottom: none;
+            }
+            .session-item:hover {
+                background: var(--surface2);
+            }
+            .session-item.selected {
+                background: rgba(47, 129, 247, 0.1);
+                border-left: 2px solid var(--accent);
+            }
+
+            .session-date {
+                font-size: 0.82rem;
+                font-weight: 500;
+            }
+
+            .session-id {
+                font-size: 0.72rem;
+                color: var(--muted);
+                font-family: monospace;
+            }
+
+            .session-actions {
+                display: flex;
+                gap: 0.35rem;
+                flex-shrink: 0;
+            }
+
+            /* ── MAIN PANEL ── */
+            .main-panel {
+                flex: 1;
+                overflow-y: auto;
+                padding: 1.8rem 2rem;
+            }
+
+            .empty-state {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 60vh;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .empty-state .icon {
+                font-size: 3.5rem;
+            }
+            .empty-state h2 {
+                font-size: 1.2rem;
+                color: var(--muted);
+                font-weight: 500;
+            }
+            .empty-state p {
+                font-size: 0.85rem;
+                color: var(--muted);
+                max-width: 280px;
+            }
+
+            /* ── SESSION DETAIL ── */
+            .session-detail-header {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                margin-bottom: 1.8rem;
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .session-detail-title h1 {
+                font-size: 1.4rem;
+                font-weight: 700;
+            }
+
+            .session-detail-title p {
+                color: var(--muted);
+                font-size: 0.88rem;
+                margin-top: 0.3rem;
+            }
+
+            .action-row {
+                display: flex;
+                gap: 0.6rem;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+
+            /* ── QR CARD ── */
+            .qr-card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+                display: flex;
+                align-items: center;
+                gap: 2rem;
+                flex-wrap: wrap;
+            }
+
+            .qr-img-wrap {
+                position: relative;
+                flex-shrink: 0;
+            }
+
+            .qr-img-wrap img {
+                width: 200px;
+                height: 200px;
+                border-radius: 10px;
+                display: block;
+                border: 4px solid #fff;
+            }
+
+            .qr-overlay-expired {
+                position: absolute;
+                inset: 0;
+                background: rgba(13, 17, 23, 0.85);
+                border-radius: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 0.4rem;
+                color: var(--red);
+                font-weight: 700;
+                font-size: 1rem;
+                display: none;
+            }
+
+            .qr-info {
+                flex: 1;
+                min-width: 200px;
+            }
+
+            .qr-info h3 {
+                font-size: 1rem;
+                font-weight: 700;
+                margin-bottom: 0.6rem;
+            }
+
+            .qr-meta {
+                display: flex;
+                flex-direction: column;
+                gap: 0.4rem;
+                margin-bottom: 1rem;
+            }
+
+            .qr-meta-row {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            .qr-meta-label {
+                color: var(--muted);
+                min-width: 80px;
+            }
+
+            .countdown {
+                font-size: 2rem;
+                font-weight: 800;
+                font-variant-numeric: tabular-nums;
+                color: var(--green);
+                transition: color 0.5s;
+            }
+
+            .countdown.warning {
+                color: var(--yellow);
+            }
+            .countdown.danger {
+                color: var(--red);
+            }
+
+            .countdown-label {
+                font-size: 0.8rem;
+                color: var(--muted);
+                margin-top: -0.2rem;
+            }
+
+            /* ── ATTENDANCE SECTION ── */
+            .attendance-section {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                overflow: hidden;
+            }
+
+            .attendance-section-header {
+                padding: 1rem 1.2rem;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .attendance-section-header h3 {
+                font-size: 0.95rem;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .ws-status {
+                display: flex;
+                align-items: center;
+                gap: 0.4rem;
+                font-size: 0.78rem;
+                color: var(--muted);
+            }
+
+            .ws-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--muted);
+            }
+
+            .ws-dot.connected {
+                background: var(--green);
+                animation: pulse 2s infinite;
+            }
+            .ws-dot.error {
+                background: var(--red);
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            thead {
+                background: var(--surface2);
+            }
+
+            th {
+                padding: 0.65rem 1rem;
+                text-align: left;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                color: var(--muted);
+                border-bottom: 1px solid var(--border);
+            }
+
+            td {
+                padding: 0.7rem 1rem;
+                font-size: 0.88rem;
+                border-bottom: 1px solid var(--border);
+            }
+
+            tr:last-child td {
+                border-bottom: none;
+            }
+
+            tbody tr {
+                transition: background 0.12s;
+            }
+            tbody tr:hover {
+                background: var(--surface2);
+            }
+            tbody tr.new-row {
+                animation: fadeIn 0.4s ease;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    background: rgba(47, 129, 247, 0.15);
+                }
+                to {
+                    background: transparent;
+                }
+            }
+
+            .empty-row td {
+                text-align: center;
+                color: var(--muted);
+                padding: 2.5rem 1rem;
+            }
+
+            /* ── BUTTONS ── */
+            .btn {
+                padding: 0.48rem 0.95rem;
+                background: var(--accent);
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                transition: background 0.15s;
+                white-space: nowrap;
+            }
+
+            .btn:hover {
+                background: var(--accent-h);
+            }
+
+            .btn.green {
+                background: #1a6b35;
+            }
+            .btn.green:hover {
+                background: #155a2b;
+            }
+
+            .btn.outline {
+                background: transparent;
+                border: 1px solid var(--border);
+                color: var(--text);
+            }
+            .btn.outline:hover {
+                background: var(--surface2);
+            }
+
+            .btn.sm {
+                padding: 0.28rem 0.6rem;
+                font-size: 0.75rem;
+                border-radius: 6px;
+            }
+
+            .btn.danger {
+                background: #b91c1c;
+            }
+            .btn.danger:hover {
+                background: #991b1b;
+            }
+
+            /* ── MODAL ── */
+            .modal-backdrop {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.68);
+                z-index: 500;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+            }
+
+            .modal-backdrop.open {
+                display: flex;
+            }
+
+            .modal {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                width: 100%;
+                max-width: 460px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+                overflow: hidden;
+            }
+
+            .modal.wide {
+                max-width: 560px;
+            }
+
+            .modal-header {
+                padding: 1.1rem 1.4rem;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .modal-header h3 {
+                font-size: 1rem;
+                font-weight: 700;
+            }
+
+            .modal-close {
+                background: transparent;
+                border: none;
+                color: var(--muted);
+                font-size: 1.2rem;
+                cursor: pointer;
+            }
+            .modal-close:hover {
+                color: var(--text);
+            }
+
+            .modal-body {
+                padding: 1.4rem;
+            }
+            .modal-footer {
+                padding: 1rem 1.4rem;
+                border-top: 1px solid var(--border);
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.6rem;
+            }
+
+            .field {
+                margin-bottom: 1rem;
+            }
+            .field label {
+                display: block;
+                font-size: 0.78rem;
+                font-weight: 600;
+                color: var(--muted);
+                margin-bottom: 0.35rem;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+
+            .field input {
+                width: 100%;
+                padding: 0.58rem 0.8rem;
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                color: var(--text);
+                font-size: 0.9rem;
+                outline: none;
+                transition:
+                    border-color 0.15s,
+                    box-shadow 0.15s;
+            }
+
+            .field input:focus {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(47, 129, 247, 0.18);
+            }
+
+            /* QR modal specific */
+            .qr-modal-img {
+                display: block;
+                margin: 0 auto 1rem;
+                width: 240px;
+                height: 240px;
+                border: 5px solid #fff;
+                border-radius: 12px;
+            }
+
+            .qr-modal-meta {
+                background: var(--surface2);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .qr-modal-timer {
+                font-size: 1.8rem;
+                font-weight: 800;
+                font-variant-numeric: tabular-nums;
+                color: var(--green);
+            }
+
+            .qr-modal-timer.warning {
+                color: var(--yellow);
+            }
+            .qr-modal-timer.danger {
+                color: var(--red);
+            }
+
+            /* ── TOAST ── */
+            #toast {
+                position: fixed;
+                bottom: 1.5rem;
+                right: 1.5rem;
+                padding: 0.7rem 1.1rem;
+                border-radius: 10px;
+                font-size: 0.88rem;
+                font-weight: 500;
+                z-index: 9999;
+                display: none;
+                align-items: center;
+                gap: 0.5rem;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+                min-width: 220px;
+                animation: slideIn 0.25s ease;
+            }
+
+            @keyframes slideIn {
+                from {
+                    transform: translateY(20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            #toast.success {
+                background: #1c3d2e;
+                color: var(--green);
+                border: 1px solid rgba(63, 185, 80, 0.3);
+                display: flex;
+            }
+            #toast.error {
+                background: #3d1c1c;
+                color: var(--red);
+                border: 1px solid rgba(249, 117, 131, 0.3);
+                display: flex;
+            }
+            #toast.info {
+                background: #1a2f4b;
+                color: #79c0ff;
+                border: 1px solid rgba(121, 192, 255, 0.3);
+                display: flex;
+            }
+
+            /* ── SCROLLBAR ── */
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--border);
+                border-radius: 3px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--muted);
+            }
+
+            @media (max-width: 768px) {
+                .layout {
+                    flex-direction: column;
+                }
+                .sidebar {
+                    width: 100%;
+                    border-right: none;
+                    border-bottom: 1px solid var(--border);
+                    max-height: 320px;
+                }
+                .main-panel {
+                    padding: 1rem;
+                }
+                .qr-card {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- NAV -->
+        <nav>
+            <div class="nav-brand">
+                <div class="nav-brand-icon">📋</div>
+                QR Attendance
+            </div>
+            <div class="nav-right">
+                <div class="user-pill">
+                    <div class="user-avatar" id="avatarInitials">?</div>
+                    <span id="navUserName">Loading…</span>
+                    <span class="badge badge-teacher">Teacher</span>
+                </div>
+                <button class="btn-icon" onclick="API.logout()">
+                    ⎋ Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- LAYOUT -->
+        <div class="layout">
+            <!-- SIDEBAR: Courses + Sessions -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>📚 My Courses</h2>
+                </div>
+                <div class="sidebar-content" id="coursesContainer">
+                    <div
+                        style="
+                            padding: 2rem 1.2rem;
+                            text-align: center;
+                            color: var(--muted);
+                            font-size: 0.88rem;
+                        "
+                    >
+                        Loading courses…
+                    </div>
+                </div>
+            </aside>
+
+            <!-- MAIN PANEL -->
+            <section class="main-panel" id="mainPanel">
+                <div class="empty-state">
+                    <div class="icon">📡</div>
+                    <h2>Select a session</h2>
+                    <p>
+                        Choose a course and session from the left panel to
+                        manage attendance and generate QR codes.
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <!-- ── MODAL: New Session ── -->
+        <div class="modal-backdrop" id="modalNewSession">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>📅 Create New Session</h3>
+                    <button class="modal-close" data-close="modalNewSession">
+                        ✕
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="field">
+                        <label>Session Date</label>
+                        <input type="date" id="newSessionDate" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn outline" data-close="modalNewSession">
+                        Cancel
+                    </button>
+                    <button class="btn" id="btnConfirmNewSession">
+                        Create Session
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── MODAL: QR Code Viewer ── -->
+        <div class="modal-backdrop" id="modalQR">
+            <div class="modal wide">
+                <div class="modal-header">
+                    <h3>🔲 QR Code</h3>
+                    <button class="modal-close" data-close="modalQR">✕</button>
+                </div>
+                <div class="modal-body">
+                    <img
+                        id="qrModalImg"
+                        class="qr-modal-img"
+                        src=""
+                        alt="QR Code"
+                    />
+                    <div class="qr-modal-meta">
+                        <div>
+                            <div
+                                style="
+                                    font-size: 0.8rem;
+                                    color: var(--muted);
+                                    margin-bottom: 0.2rem;
+                                "
+                            >
+                                Time remaining
+                            </div>
+                            <div class="qr-modal-timer" id="qrModalTimer">
+                                —
+                            </div>
+                        </div>
+                        <div style="text-align: right">
+                            <div
+                                style="
+                                    font-size: 0.8rem;
+                                    color: var(--muted);
+                                    margin-bottom: 0.2rem;
+                                "
+                            >
+                                Expires at
+                            </div>
+                            <div
+                                style="font-size: 0.9rem; font-weight: 600"
+                                id="qrModalExpiry"
+                            >
+                                —
+                            </div>
+                        </div>
+                    </div>
+                    <p
+                        style="
+                            font-size: 0.78rem;
+                            color: var(--muted);
+                            text-align: center;
+                            margin-top: 0.8rem;
+                        "
+                    >
+                        Students must scan this QR code before it expires.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn outline" data-close="modalQR">
+                        Close
+                    </button>
+                    <button class="btn green" id="btnRefreshQR">
+                        🔄 Regenerate QR
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST -->
+        <div id="toast"></div>
+
+        <script src="/api.js"></script>
+        <script>
+            /* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+            let currentUser = null;
+            let allCourses = [];
+            let sessionsByCourse = {}; // courseId → [sessions]
+            let activeCourseId = null;
+            let activeSessionId = null;
+            let qrExpiresAt = null;
+            let qrCountdownTimer = null;
+            let qrModalCountdownTimer = null;
+            let activeWS = null;
+            let attendanceRows = []; // for the current session
+
+            /* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+            (async () => {
+                try {
+                    currentUser = await API.requireAuth(["teacher", "admin"]);
+                    document.getElementById("navUserName").textContent =
+                        `${currentUser.first_name} ${currentUser.last_name}`;
+                    document.getElementById("avatarInitials").textContent =
+                        (currentUser.first_name?.[0] || "") +
+                        (currentUser.last_name?.[0] || "");
+                } catch {
+                    return;
+                }
+
+                await loadCourses();
+            })();
+
+            /* ═══════════════════════════════════════════════════════════
+   COURSES
+═══════════════════════════════════════════════════════════ */
+            async function loadCourses() {
+                const container = document.getElementById("coursesContainer");
+                try {
+                    const data = await API.apiFetch("/courses/");
+                    allCourses = Array.isArray(data)
+                        ? data
+                        : data.results || [];
+
+                    if (!allCourses.length) {
+                        container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--muted);font-size:.88rem;">
+        No courses assigned yet.
+      </div>`;
+                        return;
+                    }
+
+                    container.innerHTML = allCourses
+                        .map(
+                            (c) => `
+      <div class="course-item" id="course-item-${c.id}">
+        <div class="course-header" data-course-id="${c.id}">
+          <div class="course-info">
+            <div class="course-title">${esc(c.title)}</div>
+            <div class="course-code">${esc(c.code)}</div>
+          </div>
+          <span class="chevron">›</span>
+        </div>
+        <div class="sessions-list" id="sessions-${c.id}">
+          <div class="sessions-list-header">
+            <span>Sessions</span>
+            <button class="btn sm" onclick="openNewSessionModal(${c.id})">+ New</button>
+          </div>
+          <div id="session-items-${c.id}">
+            <div class="session-item" style="justify-content:center;color:var(--muted);font-size:.82rem;">Loading…</div>
+          </div>
+        </div>
+      </div>
+    `,
+                        )
+                        .join("");
+
+                    // Attach toggle handlers
+                    document
+                        .querySelectorAll(".course-header")
+                        .forEach((hdr) => {
+                            hdr.addEventListener("click", () =>
+                                toggleCourse(Number(hdr.dataset.courseId)),
+                            );
+                        });
+                } catch (e) {
+                    container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--red);font-size:.88rem;">
+      Failed to load courses: ${e.message}
+    </div>`;
+                }
+            }
+
+            function toggleCourse(courseId) {
+                const hdr = document.querySelector(
+                    `.course-header[data-course-id="${courseId}"]`,
+                );
+                const list = document.getElementById(`sessions-${courseId}`);
+                const isOpen = list.classList.contains("open");
+
+                // Collapse all
+                document
+                    .querySelectorAll(".sessions-list")
+                    .forEach((l) => l.classList.remove("open"));
+                document
+                    .querySelectorAll(".course-header")
+                    .forEach((h) => h.classList.remove("active"));
+
+                if (!isOpen) {
+                    hdr.classList.add("active");
+                    list.classList.add("open");
+                    activeCourseId = courseId;
+                    loadSessions(courseId);
+                } else {
+                    activeCourseId = null;
+                }
+            }
+
+            /* ═══════════════════════════════════════════════════════════
+   SESSIONS
+═══════════════════════════════════════════════════════════ */
+            async function loadSessions(courseId) {
+                const container = document.getElementById(
+                    `session-items-${courseId}`,
+                );
+                try {
+                    const data = await API.apiFetch(
+                        `/sessions/?course=${courseId}`,
+                    );
+                    const sessions = Array.isArray(data)
+                        ? data
+                        : data.results || [];
+                    sessionsByCourse[courseId] = sessions;
+
+                    if (!sessions.length) {
+                        container.innerHTML = `<div class="session-item" style="justify-content:center;color:var(--muted);font-size:.82rem;">
+        No sessions yet. Click "+ New" above.
+      </div>`;
+                        return;
+                    }
+
+                    const course = allCourses.find((c) => c.id === courseId);
+                    container.innerHTML = sessions
+                        .map(
+                            (s) => `
+      <div class="session-item ${activeSessionId === s.id ? "selected" : ""}"
+           id="session-item-${s.id}"
+           data-session-id="${s.id}"
+           data-course-id="${courseId}">
+        <div>
+          <div class="session-date">📅 ${formatDate(s.date)}</div>
+          <div class="session-id">ID #${s.id}</div>
+        </div>
+      </div>
+    `,
+                        )
+                        .join("");
+
+                    // Attach click handlers
+                    container
+                        .querySelectorAll(".session-item")
+                        .forEach((item) => {
+                            item.addEventListener("click", () => {
+                                const sid = Number(item.dataset.sessionId);
+                                const cid = Number(item.dataset.courseId);
+                                selectSession(sid, cid);
+                            });
+                        });
+                } catch (e) {
+                    container.innerHTML = `<div class="session-item" style="color:var(--red);font-size:.82rem;">
+      Error: ${e.message}
+    </div>`;
+                }
+            }
+
+            /* ═══════════════════════════════════════════════════════════
+   NEW SESSION MODAL
+═══════════════════════════════════════════════════════════ */
+            let newSessionTargetCourseId = null;
+
+            function openNewSessionModal(courseId) {
+                newSessionTargetCourseId = courseId;
+                // Set today's date as default
+                const today = new Date().toISOString().split("T")[0];
+                document.getElementById("newSessionDate").value = today;
+                openModal("modalNewSession");
+            }
+
+            document
+                .getElementById("btnConfirmNewSession")
+                .addEventListener("click", async () => {
+                    const date =
+                        document.getElementById("newSessionDate").value;
+                    if (!date) {
+                        showToast("Please pick a date.", "error");
+                        return;
+                    }
+
+                    try {
+                        const session = await API.apiFetch("/sessions/", {
+                            method: "POST",
+                            body: JSON.stringify({
+                                course: newSessionTargetCourseId,
+                                date,
+                            }),
+                        });
+                        closeModal("modalNewSession");
+                        showToast("Session created!", "success");
+                        await loadSessions(newSessionTargetCourseId);
+                        selectSession(session.id, newSessionTargetCourseId);
+                    } catch (e) {
+                        showToast(`Error: ${e.message}`, "error");
+                    }
+                });
+
+            /* ═══════════════════════════════════════════════════════════
+   SELECT SESSION — renders the main panel
+═══════════════════════════════════════════════════════════ */
+            function selectSession(sessionId, courseId) {
+                // Disconnect previous WS
+                disconnectWS();
+
+                activeSessionId = sessionId;
+                activeCourseId = courseId;
+
+                // Highlight selected
+                document
+                    .querySelectorAll(".session-item")
+                    .forEach((el) => el.classList.remove("selected"));
+                const el = document.getElementById(`session-item-${sessionId}`);
+                if (el) el.classList.add("selected");
+
+                const course = allCourses.find((c) => c.id === courseId);
+                const sessions = sessionsByCourse[courseId] || [];
+                const session = sessions.find((s) => s.id === sessionId);
+
+                renderSessionPanel(session, course);
+                loadAttendance(sessionId);
+                connectWS(sessionId);
+            }
+
+            function renderSessionPanel(session, course) {
+                const mainPanel = document.getElementById("mainPanel");
+                mainPanel.innerHTML = `
+    <div class="session-detail-header">
+      <div class="session-detail-title">
+        <h1>${esc(course?.title || "Session")}</h1>
+        <p>📅 ${formatDate(session?.date)} &nbsp;·&nbsp; Session #${session?.id}</p>
+      </div>
+      <div class="action-row">
+        <button class="btn green" id="btnGenQR">🔲 Generate QR</button>
+        <button class="btn outline" id="btnExport">📥 Export Excel</button>
+      </div>
+    </div>
+
+    <!-- QR area (hidden until generated) -->
+    <div id="qrArea" style="display:none"></div>
+
+    <!-- Attendance Table -->
+    <div class="attendance-section">
+      <div class="attendance-section-header">
+        <h3>
+          📋 Attendance
+          <span id="attendanceCount" style="font-size:.8rem;color:var(--muted);font-weight:400">— students</span>
+        </h3>
+        <div class="ws-status">
+          <div class="ws-dot" id="wsDot"></div>
+          <span id="wsStatusText">Connecting…</span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student Name</th>
+            <th>Code Massar</th>
+            <th>Field</th>
+            <th>Scanned At</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceBody">
+          <tr class="empty-row"><td colspan="6">Loading attendance…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+
+                document
+                    .getElementById("btnGenQR")
+                    .addEventListener("click", () => generateQR(session.id));
+                document
+                    .getElementById("btnExport")
+                    .addEventListener("click", () => exportExcel(session.id));
+            }
+
+            /* ═══════════════════════════════════════════════════════════
+   QR CODE
+═══════════════════════════════════════════════════════════ */
+            let lastQrData = null; // stores the last generated QR payload
+
+            async function generateQR(sessionId) {
+                const btn = document.getElementById("btnGenQR");
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "⏳ Generating…";
+                }
+
+                try {
+                    const data = await API.apiFetch(
+                        `/sessions/${sessionId}/generate-qr/`,
+                        {
+                            method: "POST",
+                            body: JSON.stringify({ expiry_minutes: 20 }),
+                        },
+                    );
+
+                    qrExpiresAt = new Date(data.qr_expires_at);
+                    lastQrData = data; // store for the Enlarge button
+
+                    // Show inline QR card
+                    showInlineQR(data);
+
+                    // Open modal
+                    openQRModal(data);
+
+                    showToast("QR code generated! (20 min)", "success");
+                } catch (e) {
+                    showToast(`QR Error: ${e.message}`, "error");
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = "🔲 Generate QR";
+                    }
+                }
+            }
+
+            function showInlineQR(data) {
+                const qrArea = document.getElementById("qrArea");
+                if (!qrArea) return;
+
+                const expiresAt = new Date(data.qr_expires_at);
+                qrArea.style.display = "block";
+                qrArea.innerHTML = `
+    <div class="qr-card">
+      <div class="qr-img-wrap">
+        <img src="${data.qr_image_base64}" alt="QR Code" />
+        <div class="qr-overlay-expired" id="qrExpiredOverlay">
+          <span style="font-size:2rem">⛔</span>
+          <span>QR Expired</span>
+          <button class="btn sm" style="margin-top:.5rem" onclick="generateQR(${activeSessionId})">Regenerate</button>
+        </div>
+      </div>
+      <div class="qr-info">
+        <h3>QR Code Active</h3>
+        <div class="qr-meta">
+          <div class="qr-meta-row">
+            <span class="qr-meta-label">Expires at</span>
+            <span style="font-weight:600">${formatTime(expiresAt)}</span>
+          </div>
+          <div class="qr-meta-row">
+            <span class="qr-meta-label">Duration</span>
+            <span>20 minutes</span>
+          </div>
+        </div>
+        <div class="countdown" id="inlineCountdown">—:——</div>
+        <div class="countdown-label">remaining</div>
+        <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn sm green" onclick="if(lastQrData) openQRModal(lastQrData)">
+            🔍 Enlarge QR
+          </button>
+          <button class="btn sm outline" onclick="generateQR(${activeSessionId})">🔄 Regenerate</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+                // Start countdown for inline card
+                clearInterval(qrCountdownTimer);
+                qrCountdownTimer = setInterval(() => {
+                    const el = document.getElementById("inlineCountdown");
+                    const expOverlay =
+                        document.getElementById("qrExpiredOverlay");
+                    if (!el) {
+                        clearInterval(qrCountdownTimer);
+                        return;
+                    }
+
+                    const remaining = Math.max(
+                        0,
+                        Math.floor((expiresAt - Date.now()) / 1000),
+                    );
+                    el.textContent = formatSeconds(remaining);
+
+                    if (remaining === 0) {
+                        el.className = "countdown danger";
+                        if (expOverlay) expOverlay.style.display = "flex";
+                        clearInterval(qrCountdownTimer);
+                    } else if (remaining < 60) {
+                        el.className = "countdown danger";
+                    } else if (remaining < 180) {
+                        el.className = "countdown warning";
+                    } else {
+                        el.className = "countdown";
+                    }
+                }, 1000);
+            }
+
+            function openQRModal(data) {
+                const expiresAt = new Date(data.qr_expires_at);
+                document.getElementById("qrModalImg").src =
+                    data.qr_image_base64;
+                document.getElementById("qrModalExpiry").textContent =
+                    formatTime(expiresAt);
+
+                openModal("modalQR");
+
+                // Store for regenerate button
+                document.getElementById("btnRefreshQR")._sessionId =
+                    activeSessionId;
+
+                clearInterval(qrModalCountdownTimer);
+                qrModalCountdownTimer = setInterval(() => {
+                    const timerEl = document.getElementById("qrModalTimer");
+                    if (!timerEl) {
+                        clearInterval(qrModalCountdownTimer);
+                        return;
+                    }
+
+                    const remaining = Math.max(
+                        0,
+                        Math.floor((expiresAt - Date.now()) / 1000),
+                    );
+                    timerEl.textContent = formatSeconds(remaining);
+
+                    if (remaining === 0) {
+                        timerEl.className = "qr-modal-timer danger";
+                        clearInterval(qrModalCountdownTimer);
+                    } else if (remaining < 60) {
+                        timerEl.className = "qr-modal-timer danger";
+                    } else if (remaining < 180) {
+                        timerEl.className = "qr-modal-timer warning";
+                    } else {
+                        timerEl.className = "qr-modal-timer";
+                    }
+                }, 1000);
+            }
+
+            document
+                .getElementById("btnRefreshQR")
+                .addEventListener("click", async () => {
+                    const sid =
+                        document.getElementById("btnRefreshQR")._sessionId ||
+                        activeSessionId;
+                    if (!sid) return;
+                    closeModal("modalQR");
+                    clearInterval(qrModalCountdownTimer);
+                    await generateQR(sid);
+                });
+
+            /* ═══════════════════════════════════════════════════════════
+   ATTENDANCE
+═══════════════════════════════════════════════════════════ */
+            async function loadAttendance(sessionId) {
+                const tbody = document.getElementById("attendanceBody");
+                if (!tbody) return;
+
+                try {
+                    const data = await API.apiFetch(
+                        `/attendance/session/${sessionId}/`,
+                    );
+                    attendanceRows = Array.isArray(data)
+                        ? data
+                        : data.results || [];
+                    renderAttendance(attendanceRows);
+                } catch (e) {
+                    if (tbody) {
+                        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Failed to load attendance: ${e.message}</td></tr>`;
+                    }
+                }
+            }
+
+            function renderAttendance(rows) {
+                const tbody = document.getElementById("attendanceBody");
+                const countEl = document.getElementById("attendanceCount");
+                if (!tbody) return;
+
+                if (countEl)
+                    countEl.textContent = `${rows.length} student${rows.length !== 1 ? "s" : ""}`;
+
+                if (!rows.length) {
+                    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">
+      No attendance recorded yet. Generate a QR code and wait for students to scan.
+    </td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = rows
+                    .map(
+                        (r, i) => `
+    <tr>
+      <td style="color:var(--muted)">${i + 1}</td>
+      <td><strong>${esc(r.student_name || r.student?.first_name + " " + r.student?.last_name || "—")}</strong></td>
+      <td style="font-family:monospace;color:var(--accent)">${esc(r.student?.code_massar || r.code_massar || "—")}</td>
+      <td style="color:var(--muted)">${esc(r.student?.field || r.field || "—")}</td>
+      <td style="color:var(--muted);font-size:.8rem">${formatDateTime(r.scanned_at || r.created_at)}</td>
+      <td><span class="badge badge-present">Present</span></td>
+    </tr>
+  `,
+                    )
+                    .join("");
+            }
+
+            function addAttendanceRow(record) {
+                // Avoid duplicate entries
+                const exists = attendanceRows.some((r) => r.id === record.id);
+                if (exists) return;
+
+                attendanceRows.push(record);
+
+                const tbody = document.getElementById("attendanceBody");
+                const countEl = document.getElementById("attendanceCount");
+                if (!tbody) return;
+
+                // Remove empty state
+                const emptyRow = tbody.querySelector(".empty-row");
+                if (emptyRow) emptyRow.remove();
+
+                if (countEl)
+                    countEl.textContent = `${attendanceRows.length} student${attendanceRows.length !== 1 ? "s" : ""}`;
+
+                const idx = attendanceRows.length;
+                const tr = document.createElement("tr");
+                tr.className = "new-row";
+                tr.innerHTML = `
+    <td style="color:var(--muted)">${idx}</td>
+    <td><strong>${esc(record.student_name || record.student?.first_name + " " + record.student?.last_name || "—")}</strong></td>
+    <td style="font-family:monospace;color:var(--accent)">${esc(record.student?.code_massar || record.code_massar || "—")}</td>
+    <td style="color:var(--muted)">${esc(record.student?.field || record.field || "—")}</td>
+    <td style="color:var(--muted);font-size:.8rem">${formatDateTime(record.scanned_at || record.created_at)}</td>
+    <td><span class="badge badge-present">Present</span></td>
+  `;
+                tbody.prepend(tr); // newest on top
+
+                showToast(
+                    `✅ ${record.student_name || "Student"} just scanned in!`,
+                    "info",
+                );
+            }
+
+            /* ═══════════════════════════════════════════════════════════
+   WEBSOCKET
+═══════════════════════════════════════════════════════════ */
+            function connectWS(sessionId) {
+                const wsDot = document.getElementById("wsDot");
+                const wsStatus = document.getElementById("wsStatusText");
+
+                const wsUrl = `ws://localhost:8000/ws/attendance/${sessionId}/`;
+
+                try {
+                    activeWS = new WebSocket(wsUrl);
+
+                    activeWS.onopen = () => {
+                        if (wsDot) wsDot.className = "ws-dot connected";
+                        if (wsStatus) wsStatus.textContent = "Live";
+                    };
+
+                    activeWS.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            // Handle both a single record and a {type, data} wrapper
+                            const record = data.data || data;
+                            if (record && (record.id || record.student)) {
+                                addAttendanceRow(record);
+                            }
+                        } catch {}
+                    };
+
+                    activeWS.onerror = () => {
+                        if (wsDot) wsDot.className = "ws-dot error";
+                        if (wsStatus) wsStatus.textContent = "Connection error";
+                    };
+
+                    activeWS.onclose = () => {
+                        if (wsDot) wsDot.className = "ws-dot";
+                        if (wsStatus) wsStatus.textContent = "Disconnected";
+                    };
+                } catch (e) {
+                    if (wsDot) wsDot.className = "ws-dot error";
+                    if (wsStatus) wsStatus.textContent = "WS unavailable";
+                }
+            }
+
+            function disconnectWS() {
+                if (activeWS) {
+                    activeWS.close();
+                    activeWS = null;
+                }
+                clearInterval(qrCountdownTimer);
+                clearInterval(qrModalCountdownTimer);
+            }
+
+            /* ═══════════════════════════════════════════════════════════
+   EXPORT EXCEL
+═══════════════════════════════════════════════════════════ */
+            async function exportExcel(sessionId) {
+                const btn = document.getElementById("btnExport");
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "⏳ Exporting…";
+                }
+
+                try {
+                    const blob = await API.apiFetch(
+                        `/attendance/session/${sessionId}/export/`,
+                    );
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `attendance_session_${sessionId}.xlsx`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast("Excel file downloaded!", "success");
+                } catch (e) {
+                    showToast(`Export failed: ${e.message}`, "error");
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = "📥 Export Excel";
+                    }
+                }
+            }
+
+            /* ═══════════════════════════════════════════════════════════
+   MODAL HELPERS
+═══════════════════════════════════════════════════════════ */
+            function openModal(id) {
+                document.getElementById(id).classList.add("open");
+            }
+            function closeModal(id) {
+                document.getElementById(id).classList.remove("open");
+            }
+
+            document.querySelectorAll("[data-close]").forEach((el) => {
+                el.addEventListener("click", () => {
+                    closeModal(el.dataset.close);
+                    if (el.dataset.close === "modalQR")
+                        clearInterval(qrModalCountdownTimer);
+                });
+            });
+
+            document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+                backdrop.addEventListener("click", (e) => {
+                    if (e.target === backdrop) {
+                        closeModal(backdrop.id);
+                        if (backdrop.id === "modalQR")
+                            clearInterval(qrModalCountdownTimer);
+                    }
+                });
+            });
+
+            /* ═══════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════ */
+            let _toastTimer;
+            function showToast(msg, type = "success") {
+                const t = document.getElementById("toast");
+                t.className = type;
+                t.innerHTML = `<span>${type === "success" ? "✅" : type === "info" ? "ℹ️" : "❌"}</span><span>${msg}</span>`;
+                clearTimeout(_toastTimer);
+                _toastTimer = setTimeout(() => {
+                    t.className = "";
+                }, 4000);
+            }
+
+            /* ═══════════════════════════════════════════════════════════
+   FORMATTERS
+═══════════════════════════════════════════════════════════ */
+            function formatSeconds(secs) {
+                const m = Math.floor(secs / 60);
+                const s = secs % 60;
+                return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return "—";
+                try {
+                    return new Date(dateStr).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                    });
+                } catch {
+                    return dateStr;
+                }
+            }
+
+            function formatTime(dt) {
+                if (!dt) return "—";
+                try {
+                    return new Date(dt).toLocaleTimeString("en-GB", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                    });
+                } catch {
+                    return "—";
+                }
+            }
+
+            function formatDateTime(dt) {
+                if (!dt) return "—";
+                try {
+                    return new Date(dt).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    });
+                } catch {
+                    return dt;
+                }
+            }
+
+            function esc(str) {
+                if (str === null || str === undefined) return "";
+                return String(str)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,200 @@
+/**
+ * api.js — Shared API utility for QR Attendance System
+ * Loaded via <script src="/api.js"></script> on every page.
+ * Exposes a global `window.API` object.
+ */
+
+const API_BASE = 'http://localhost:8000/api/v1';
+
+/* ─── Token helpers ─────────────────────────────────────────────────────── */
+
+function getToken() {
+  return localStorage.getItem('access_token');
+}
+
+function getRefreshToken() {
+  return localStorage.getItem('refresh_token');
+}
+
+function setTokens(access, refresh) {
+  localStorage.setItem('access_token', access);
+  if (refresh !== undefined) {
+    localStorage.setItem('refresh_token', refresh);
+  }
+}
+
+function clearTokens() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('current_user');
+}
+
+/* ─── Token refresh ─────────────────────────────────────────────────────── */
+
+let _refreshPromise = null;
+
+async function refreshAccessToken() {
+  if (_refreshPromise) return _refreshPromise;
+
+  _refreshPromise = (async () => {
+    const refresh = getRefreshToken();
+    if (!refresh) throw new Error('No refresh token');
+
+    const res = await fetch(`${API_BASE}/auth/refresh/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh }),
+    });
+
+    if (!res.ok) throw new Error('Refresh failed');
+
+    const data = await res.json();
+    setTokens(data.access);
+    return data.access;
+  })();
+
+  _refreshPromise.finally(() => { _refreshPromise = null; });
+  return _refreshPromise;
+}
+
+/* ─── Core fetch wrapper ────────────────────────────────────────────────── */
+
+async function apiFetch(path, options = {}) {
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+
+  const makeRequest = async (token) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    // Allow overriding Content-Type (e.g. for FormData)
+    if (options.body instanceof FormData) {
+      delete headers['Content-Type'];
+    }
+
+    return fetch(url, { ...options, headers });
+  };
+
+  let token = getToken();
+  let res = await makeRequest(token);
+
+  // 401 → try refresh once, then redirect
+  if (res.status === 401) {
+    try {
+      token = await refreshAccessToken();
+      res = await makeRequest(token);
+    } catch {
+      clearTokens();
+      window.location.href = '/login/';
+      throw new Error('Unauthenticated');
+    }
+    if (res.status === 401) {
+      clearTokens();
+      window.location.href = '/login/';
+      throw new Error('Unauthenticated');
+    }
+  }
+
+  if (!res.ok) {
+    let errMsg = `HTTP ${res.status}`;
+    try {
+      const errData = await res.json();
+      errMsg = errData.detail || errData.message || JSON.stringify(errData);
+    } catch {}
+    throw new Error(errMsg);
+  }
+
+  // 204 No Content
+  if (res.status === 204) return null;
+
+  const contentType = res.headers.get('Content-Type') || '';
+  if (contentType.includes('application/json')) {
+    return res.json();
+  }
+  return res.blob();
+}
+
+/* ─── Auth helpers ──────────────────────────────────────────────────────── */
+
+async function login(email, password) {
+  const res = await fetch(`${API_BASE}/auth/login/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!res.ok) {
+    let msg = 'Login failed';
+    try {
+      const d = await res.json();
+      msg = d.detail || d.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
+  setTokens(data.access, data.refresh);
+  localStorage.setItem('current_user', JSON.stringify(data.user));
+  return data;
+}
+
+async function getMe() {
+  const cached = localStorage.getItem('current_user');
+  if (cached) {
+    try { return JSON.parse(cached); } catch {}
+  }
+  const user = await apiFetch('/auth/me/');
+  localStorage.setItem('current_user', JSON.stringify(user));
+  return user;
+}
+
+function logout() {
+  clearTokens();
+  window.location.href = '/login/';
+}
+
+/* ─── Auth guard ────────────────────────────────────────────────────────── */
+
+/**
+ * Call at the top of any protected page.
+ * @param {string|string[]} [allowedRoles] — if provided, redirect if role not in list
+ * @returns {Promise<object>} the current user object
+ */
+async function requireAuth(allowedRoles) {
+  if (!getToken()) {
+    window.location.href = '/login/';
+    throw new Error('No token');
+  }
+  try {
+    const user = await getMe();
+    if (allowedRoles) {
+      const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+      if (!roles.includes(user.role)) {
+        window.location.href = '/login/';
+        throw new Error('Forbidden');
+      }
+    }
+    return user;
+  } catch (e) {
+    if (e.message === 'Forbidden') throw e;
+    window.location.href = '/login/';
+    throw e;
+  }
+}
+
+/* ─── Expose global window.API ──────────────────────────────────────────── */
+
+window.API = {
+  BASE: API_BASE,
+  getToken,
+  getRefreshToken,
+  setTokens,
+  clearTokens,
+  apiFetch,
+  login,
+  getMe,
+  logout,
+  requireAuth,
+};

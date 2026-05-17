@@ -1,0 +1,10 @@
+# Animations placeholder
+# Place Lottie animation JSON files in this directory.
+# Examples:
+#   - success.json
+#   - error.json
+#   - loading.json
+#   - scanning.json
+#
+# You can download free Lottie animations from:
+#   https://lottiefiles.com/

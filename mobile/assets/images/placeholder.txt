@@ -1,0 +1,6 @@
+# Assets placeholder
+# Place app images (PNG, JPG, SVG) in this directory.
+# Examples:
+#   - logo.png
+#   - splash_background.png
+#   - onboarding_1.png

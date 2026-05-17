@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — QR Attendance</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --surface2: #1c2230;
+      --border:   #30363d;
+      --accent:   #2f81f7;
+      --accent-h: #1f6feb;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --green:    #3fb950;
+      --red:      #f97583;
+      --purple:   #d2a8ff;
+      --yellow:   #e3b341;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .nav-brand-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--accent), #6e40c9);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: .3rem .9rem .3rem .45rem;
+      font-size: .85rem;
+    }
+
+    .user-avatar {
+      width: 26px; height: 26px;
+      background: linear-gradient(135deg, #6e40c9, var(--accent));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: .15rem .5rem;
+      border-radius: 10px;
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .badge-admin   { background: #2f2041; color: var(--purple); }
+    .badge-teacher { background: #1a2f4b; color: #79c0ff; }
+    .badge-student { background: #1c3d2e; color: var(--green); }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: .35rem .7rem;
+      cursor: pointer;
+      font-size: .85rem;
+      transition: background .15s;
+    }
+    .btn-icon:hover { background: var(--surface2); }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .page-header {
+      margin-bottom: 1.8rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .page-header p {
+      color: var(--muted);
+      margin-top: .3rem;
+      font-size: .9rem;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: .25rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.8rem;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: .95rem;
+      padding: .65rem 1.2rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .15s, border-color .15s;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    .tab-btn:hover  { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-count {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .05rem .4rem;
+      font-size: .72rem;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── SECTION HEADER ── */
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .section-head h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    /* ── BUTTON ── */
+    .btn {
+      padding: .5rem 1rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      transition: background .15s;
+    }
+    .btn:hover    { background: var(--accent-h); }
+    .btn.danger   { background: #b91c1c; }
+    .btn.danger:hover { background: #991b1b; }
+    .btn.sm       { padding: .3rem .7rem; font-size: .8rem; }
+    .btn.outline  {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn.outline:hover { background: var(--surface2); }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--surface2);
+    }
+
+    th {
+      padding: .7rem 1rem;
+      text-align: left;
+      font-size: .78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: .75rem 1rem;
+      font-size: .9rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tbody tr {
+      transition: background .12s;
+    }
+    tbody tr:hover { background: var(--surface2); }
+
+    .empty-row td {
+      text-align: center;
+      color: var(--muted);
+      padding: 2.5rem 1rem;
+    }
+
+    /* ── MODAL ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.6);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 1.2rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: .2rem;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body {
+      padding: 1.4rem;
+    }
+
+    .modal-footer {
+      padding: 1rem 1.4rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: .6rem;
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: .35rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      padding: .6rem .8rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .9rem;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .field select option { background: var(--bg); }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(47,129,247,.18);
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .8rem;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      padding: .7rem 1.1rem;
+      border-radius: 10px;
+      font-size: .88rem;
+      font-weight: 500;
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      gap: .5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,.4);
+      min-width: 220px;
+      animation: slideIn .25s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    #toast.success { background: #1c3d2e; color: var(--green); border: 1px solid rgba(63,185,80,.3); display: flex; }
+    #toast.error   { background: #3d1c1c; color: var(--red);   border: 1px solid rgba(249,117,131,.3); display: flex; }
+
+    /* ── LOADING SKELETON ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+      height: 14px;
+      display: inline-block;
+    }
+
+    @keyframes shimmer {
+      from { background-position: 200% 0; }
+      to   { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-brand-icon">📋</div>
+    QR Attendance
+  </div>
+  <div class="nav-right">
+    <div class="user-pill">
+      <div class="user-avatar" id="avatarInitials">?</div>
+      <span id="navUserName">Loading…</span>
+      <span class="badge badge-admin">Admin</span>
+    </div>
+    <button class="btn-icon" onclick="API.logout()">⎋ Logout</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main>
+  <div class="page-header">
+    <h1>Admin Dashboard</h1>
+    <p>Manage users, students, and courses across the system.</p>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="users">
+      👤 Users <span class="tab-count" id="cntUsers">—</span>
+    </button>
+    <button class="tab-btn" data-tab="students">
+      🎓 Students <span class="tab-count" id="cntStudents">—</span>
+    </button>
+    <button class="tab-btn" data-tab="courses">
+      📚 Courses <span class="tab-count" id="cntCourses">—</span>
+    </button>
+  </div>
+
+  <!-- USERS PANEL -->
+  <div class="tab-panel active" id="tab-users">
+    <div class="section-head">
+      <h2>All Users</h2>
+      <button class="btn" id="btnOpenAddUser">+ New User</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody">
+          <tr class="empty-row"><td colspan="4">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- STUDENTS PANEL -->
+  <div class="tab-panel" id="tab-students">
+    <div class="section-head">
+      <h2>All Students</h2>
+      <button class="btn" id="btnOpenAddStudent">+ Add Student</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Code Massar</th>
+            <th>Field</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody">
+          <tr class="empty-row"><td colspan="4">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COURSES PANEL -->
+  <div class="tab-panel" id="tab-courses">
+    <div class="section-head">
+      <h2>All Courses</h2>
+      <button class="btn" id="btnOpenAddCourse">+ New Course</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Code</th>
+            <th>Teacher</th>
+          </tr>
+        </thead>
+        <tbody id="coursesBody">
+          <tr class="empty-row"><td colspan="4">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- ── MODAL: Add User ── -->
+<div class="modal-backdrop" id="modalAddUser">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Create New User</h3>
+      <button class="modal-close" data-close="modalAddUser">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field">
+          <label>First Name</label>
+          <input type="text" id="uFirstName" placeholder="John" />
+        </div>
+        <div class="field">
+          <label>Last Name</label>
+          <input type="text" id="uLastName" placeholder="Doe" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="uEmail" placeholder="john@school.ma" />
+      </div>
+      <div class="field">
+        <label>Role</label>
+        <select id="uRole">
+          <option value="teacher">Teacher</option>
+          <option value="admin">Admin</option>
+          <option value="student">Student</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="uPassword" placeholder="••••••••" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" data-close="modalAddUser">Cancel</button>
+      <button class="btn" id="btnSubmitUser">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Add Student ── -->
+<div class="modal-backdrop" id="modalAddStudent">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add New Student</h3>
+      <button class="modal-close" data-close="modalAddStudent">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field">
+          <label>First Name</label>
+          <input type="text" id="sFirstName" placeholder="Ayman" />
+        </div>
+        <div class="field">
+          <label>Last Name</label>
+          <input type="text" id="sLastName" placeholder="Benali" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Code Massar</label>
+        <input type="text" id="sCode" placeholder="M123456" />
+      </div>
+      <div class="field">
+        <label>Field / Section</label>
+        <input type="text" id="sField" placeholder="Computer Science" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" data-close="modalAddStudent">Cancel</button>
+      <button class="btn" id="btnSubmitStudent">Add Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Add Course ── -->
+<div class="modal-backdrop" id="modalAddCourse">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Create New Course</h3>
+      <button class="modal-close" data-close="modalAddCourse">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Course Title</label>
+        <input type="text" id="cTitle" placeholder="Introduction to Algorithms" />
+      </div>
+      <div class="field">
+        <label>Course Code</label>
+        <input type="text" id="cCode" placeholder="CS101" />
+      </div>
+      <div class="field">
+        <label>Assign Teacher</label>
+        <select id="cTeacher">
+          <option value="">— Loading teachers… —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" data-close="modalAddCourse">Cancel</button>
+      <button class="btn" id="btnSubmitCourse">Create Course</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="/api.js"></script>
+<script>
+  /* ── Auth guard ── */
+  let currentUser = null;
+
+  (async () => {
+    try {
+      currentUser = await API.requireAuth('admin');
+      document.getElementById('navUserName').textContent =
+        `${currentUser.first_name} ${currentUser.last_name}`;
+      document.getElementById('avatarInitials').textContent =
+        (currentUser.first_name?.[0] || '') + (currentUser.last_name?.[0] || '');
+    } catch {}
+
+    loadAll();
+  })();
+
+  /* ── Data stores ── */
+  let allUsers    = [];
+  let allStudents = [];
+  let allCourses  = [];
+  let allTeachers = [];
+
+  async function loadAll() {
+    await Promise.all([loadUsers(), loadStudents(), loadCourses()]);
+  }
+
+  /* ── Load Users ── */
+  async function loadUsers() {
+    try {
+      const data = await API.apiFetch('/users/');
+      allUsers = Array.isArray(data) ? data : (data.results || []);
+      renderUsers();
+      document.getElementById('cntUsers').textContent = allUsers.length;
+    } catch (e) {
+      document.getElementById('usersBody').innerHTML =
+        `<tr class="empty-row"><td colspan="4">Failed to load users: ${e.message}</td></tr>`;
+    }
+  }
+
+  function renderUsers() {
+    const tbody = document.getElementById('usersBody');
+    if (!allUsers.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No users found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allUsers.map((u, i) => `
+      <tr>
+        <td><span style="color:var(--muted)">${i + 1}</span></td>
+        <td><strong>${esc(u.first_name)} ${esc(u.last_name)}</strong></td>
+        <td style="color:var(--muted)">${esc(u.email)}</td>
+        <td><span class="badge badge-${u.role}">${u.role}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  /* ── Load Students ── */
+  async function loadStudents() {
+    try {
+      const data = await API.apiFetch('/students/');
+      allStudents = Array.isArray(data) ? data : (data.results || []);
+      renderStudents();
+      document.getElementById('cntStudents').textContent = allStudents.length;
+    } catch (e) {
+      document.getElementById('studentsBody').innerHTML =
+        `<tr class="empty-row"><td colspan="4">Failed to load students: ${e.message}</td></tr>`;
+    }
+  }
+
+  function renderStudents() {
+    const tbody = document.getElementById('studentsBody');
+    if (!allStudents.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No students found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allStudents.map((s, i) => `
+      <tr>
+        <td><span style="color:var(--muted)">${i + 1}</span></td>
+        <td><strong>${esc(s.first_name)} ${esc(s.last_name)}</strong></td>
+        <td style="font-family:monospace;color:var(--accent)">${esc(s.code_massar)}</td>
+        <td style="color:var(--muted)">${esc(s.field || '—')}</td>
+      </tr>
+    `).join('');
+  }
+
+  /* ── Load Courses ── */
+  async function loadCourses() {
+    try {
+      const data = await API.apiFetch('/courses/');
+      allCourses = Array.isArray(data) ? data : (data.results || []);
+      renderCourses();
+      document.getElementById('cntCourses').textContent = allCourses.length;
+    } catch (e) {
+      document.getElementById('coursesBody').innerHTML =
+        `<tr class="empty-row"><td colspan="4">Failed to load courses: ${e.message}</td></tr>`;
+    }
+  }
+
+  function renderCourses() {
+    const tbody = document.getElementById('coursesBody');
+    if (!allCourses.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No courses found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allCourses.map((c, i) => `
+      <tr>
+        <td><span style="color:var(--muted)">${i + 1}</span></td>
+        <td><strong>${esc(c.title)}</strong></td>
+        <td style="font-family:monospace;color:var(--yellow)">${esc(c.code)}</td>
+        <td style="color:var(--muted)">${esc(teacherName(c.teacher))}</td>
+      </tr>
+    `).join('');
+  }
+
+  function teacherName(teacherId) {
+    const t = allUsers.find(u => u.id === teacherId || u.id === Number(teacherId));
+    if (t) return `${t.first_name} ${t.last_name}`;
+    return teacherId || '—';
+  }
+
+  /* ── Tabs ── */
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  /* ── Modals ── */
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  document.querySelectorAll('[data-close]').forEach(el => {
+    el.addEventListener('click', () => closeModal(el.dataset.close));
+  });
+
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeModal(backdrop.id);
+    });
+  });
+
+  /* ── Add User ── */
+  document.getElementById('btnOpenAddUser').addEventListener('click', () => openModal('modalAddUser'));
+
+  document.getElementById('btnSubmitUser').addEventListener('click', async () => {
+    const body = {
+      first_name: document.getElementById('uFirstName').value.trim(),
+      last_name:  document.getElementById('uLastName').value.trim(),
+      email:      document.getElementById('uEmail').value.trim(),
+      role:       document.getElementById('uRole').value,
+      password:   document.getElementById('uPassword').value,
+    };
+
+    if (!body.first_name || !body.last_name || !body.email || !body.password) {
+      showToast('Please fill in all fields.', 'error'); return;
+    }
+
+    try {
+      await API.apiFetch('/users/', { method: 'POST', body: JSON.stringify(body) });
+      closeModal('modalAddUser');
+      showToast('User created successfully!', 'success');
+      ['uFirstName','uLastName','uEmail','uPassword'].forEach(id => document.getElementById(id).value = '');
+      await loadUsers();
+    } catch (e) {
+      showToast(`Error: ${e.message}`, 'error');
+    }
+  });
+
+  /* ── Add Student ── */
+  document.getElementById('btnOpenAddStudent').addEventListener('click', () => openModal('modalAddStudent'));
+
+  document.getElementById('btnSubmitStudent').addEventListener('click', async () => {
+    const body = {
+      first_name:  document.getElementById('sFirstName').value.trim(),
+      last_name:   document.getElementById('sLastName').value.trim(),
+      code_massar: document.getElementById('sCode').value.trim(),
+      field:       document.getElementById('sField').value.trim(),
+    };
+
+    if (!body.first_name || !body.last_name || !body.code_massar) {
+      showToast('First name, last name and code massar are required.', 'error'); return;
+    }
+
+    try {
+      await API.apiFetch('/students/', { method: 'POST', body: JSON.stringify(body) });
+      closeModal('modalAddStudent');
+      showToast('Student added successfully!', 'success');
+      ['sFirstName','sLastName','sCode','sField'].forEach(id => document.getElementById(id).value = '');
+      await loadStudents();
+    } catch (e) {
+      showToast(`Error: ${e.message}`, 'error');
+    }
+  });
+
+  /* ── Add Course ── */
+  document.getElementById('btnOpenAddCourse').addEventListener('click', async () => {
+    // Populate teachers dropdown
+    const teacherSel = document.getElementById('cTeacher');
+    teacherSel.innerHTML = '<option value="">— Select Teacher —</option>';
+    const teachers = allUsers.filter(u => u.role === 'teacher');
+    allTeachers = teachers;
+    teachers.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = `${t.first_name} ${t.last_name}`;
+      teacherSel.appendChild(opt);
+    });
+    openModal('modalAddCourse');
+  });
+
+  document.getElementById('btnSubmitCourse').addEventListener('click', async () => {
+    const body = {
+      title:   document.getElementById('cTitle').value.trim(),
+      code:    document.getElementById('cCode').value.trim(),
+      teacher: document.getElementById('cTeacher').value,
+    };
+
+    if (!body.title || !body.code || !body.teacher) {
+      showToast('All course fields are required.', 'error'); return;
+    }
+
+    try {
+      await API.apiFetch('/courses/', { method: 'POST', body: JSON.stringify(body) });
+      closeModal('modalAddCourse');
+      showToast('Course created successfully!', 'success');
+      ['cTitle','cCode'].forEach(id => document.getElementById(id).value = '');
+      await loadCourses();
+    } catch (e) {
+      showToast(`Error: ${e.message}`, 'error');
+    }
+  });
+
+  /* ── Toast ── */
+  let _toastTimer;
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.className = type;
+    t.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span><span>${msg}</span>`;
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { t.className = ''; }, 3500);
+  }
+
+  /* ── Escape HTML ── */
+  function esc(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
