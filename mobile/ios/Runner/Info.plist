@@ -54,8 +54,8 @@
 				<key>NSIncludesSubdomains</key>
 				<false/>
 			</dict>
-			<!-- Replace with your LAN IP when testing on a real device -->
-			<key>192.168.1.1</key>
+			<!-- PC running Django on the same Wi‑Fi (must match DEV_HOST / backend ALLOWED_HOSTS) -->
+			<key>192.168.1.15</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>

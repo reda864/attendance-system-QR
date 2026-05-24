@@ -54,7 +54,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
         write_only=True, min_length=8, style={"input_type": "password"}
     )
     password_confirm = serializers.CharField(
-        write_only=True, style={"input_type": "password"}
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        style={"input_type": "password"},
     )
 
     class Meta:
@@ -69,10 +72,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        if data["password"] != data.pop("password_confirm"):
+        password = data.get("password")
+        password_confirm = data.get("password_confirm")
+        if password_confirm is not None and password != password_confirm:
             raise serializers.ValidationError(
                 {"password_confirm": "Passwords do not match."}
             )
+        data.pop("password_confirm", None)
         return data
 
     def create(self, validated_data):

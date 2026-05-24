@@ -55,11 +55,26 @@ class AttendanceService:
                 "Please check your first name and last name."
             )
 
-        # 4. Check for duplicate attendance
+        # 4. Check for duplicate attendance (same student)
         if Attendance.objects.filter(student=student, session=session).exists():
             raise ValueError("Attendance already recorded for this session.")
 
-        # 5. Create attendance record
+        # 5. Prevent the same phone from scanning twice in one session
+        if ip_address and Attendance.objects.filter(
+            session=session, ip_address=ip_address
+        ).exists():
+            raise ValueError(
+                "This device has already been used to mark attendance for this session."
+            )
+
+        if device_id and Attendance.objects.filter(
+            session=session, device_id=device_id
+        ).exists():
+            raise ValueError(
+                "This device has already been used to mark attendance for this session."
+            )
+
+        # 6. Create attendance record
         attendance = Attendance.objects.create(
             student=student,
             session=session,

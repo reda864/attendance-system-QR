@@ -29,6 +29,25 @@ def get_client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 
+def broadcast_attendance(attendance, session):
+    """Push a new attendance record to all relevant WebSocket groups."""
+    try:
+        channel_layer = get_channel_layer()
+        payload = {
+            "type": "attendance_update",
+            "data": AttendanceSerializer(attendance).data,
+        }
+        async_to_sync(channel_layer.group_send)(f"attendance_{session.id}", payload)
+        async_to_sync(channel_layer.group_send)("attendance_admin", payload)
+        teacher_id = session.course.teacher_id
+        if teacher_id:
+            async_to_sync(channel_layer.group_send)(
+                f"attendance_teacher_{teacher_id}", payload
+            )
+    except Exception as e:
+        logger.warning(f"WebSocket broadcast failed: {e}")
+
+
 class ValidateAttendanceView(APIView):
     permission_classes = [AllowAny]
 
@@ -51,22 +70,39 @@ class ValidateAttendanceView(APIView):
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Broadcast via WebSocket
-        try:
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f"attendance_{session.id}",
-                {
-                    "type": "attendance_update",
-                    "data": AttendanceSerializer(attendance).data,
-                },
-            )
-        except Exception as e:
-            logger.warning(f"WebSocket broadcast failed: {e}")
+        broadcast_attendance(attendance, session)
 
         return Response(
             AttendanceSerializer(attendance).data, status=status.HTTP_201_CREATED
         )
+
+
+class AllAttendanceListView(ListAPIView):
+    """List attendance records — all for admin, own courses for teachers."""
+
+    serializer_class = AttendanceSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrTeacher]
+
+    def get_queryset(self):
+        qs = (
+            Attendance.objects.select_related(
+                "student", "session__course", "session__course__teacher"
+            )
+            .order_by("-validation_time")
+        )
+
+        user = self.request.user
+        if user.role == "teacher":
+            qs = qs.filter(session__course__teacher=user)
+
+        session_id = self.request.query_params.get("session")
+        course_id = self.request.query_params.get("course")
+        if session_id:
+            qs = qs.filter(session_id=session_id)
+        if course_id:
+            qs = qs.filter(session__course_id=course_id)
+
+        return qs
 
 
 class SessionAttendanceListView(ListAPIView):
@@ -75,6 +111,18 @@ class SessionAttendanceListView(ListAPIView):
 
     def get_queryset(self):
         session_id = self.kwargs["session_id"]
+        user = self.request.user
+
+        if user.role == "teacher":
+            try:
+                session = Session.objects.select_related("course__teacher").get(
+                    pk=session_id
+                )
+            except Session.DoesNotExist:
+                return Attendance.objects.none()
+            if session.course.teacher != user:
+                return Attendance.objects.none()
+
         return (
             Attendance.objects.select_related("student", "session__course")
             .filter(session_id=session_id)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'constants/app_constants.dart';
@@ -54,6 +55,13 @@ class AttendanceApp extends StatelessWidget {
           return MaterialApp(
             title: AppConstants.appName,
             debugShowCheckedModeBanner: false,
+            locale: const Locale('fr', 'FR'),
+            supportedLocales: const [Locale('fr', 'FR')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
 
             // ── Themes ──────────────────────────────────────────────────
             theme: AppTheme.lightTheme,

@@ -4,6 +4,8 @@ import 'dart:io' hide TimeoutException;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 
+import '../constants/app_constants.dart';
+
 /// A service that monitors and checks network connectivity.
 ///
 /// Usage:
@@ -141,15 +143,15 @@ class ConnectivityService {
         (results.length == 1 && results.first == ConnectivityResult.none);
   }
 
-  /// Attempts a real DNS lookup to confirm actual internet access.
-  /// Falls back to `true` on non-mobile platforms in debug mode to avoid
-  /// blocking emulator development.
+  /// Confirms the device can reach the API (LAN dev) or public internet (cloud).
   Future<bool> _verifyInternetAccess() async {
-    // On web, skip the socket check — always assume connected if OS says so
     if (kIsWeb) return true;
 
-    // Debug / profile: LAN-only dev (API on your PC) should not require public DNS.
+    // Debug / profile: LAN-only dev should not require public DNS.
     if (kDebugMode || kProfileMode) return true;
+
+    // Release builds talking to a LAN/localhost API: Wi‑Fi/mobile is enough.
+    if (_isLanApiHost()) return true;
 
     try {
       final result = await InternetAddress.lookup('google.com')
@@ -162,6 +164,19 @@ class ConnectivityService {
     } catch (_) {
       return false;
     }
+  }
+
+  bool _isLanApiHost() {
+    try {
+      final host = Uri.parse(AppConstants.baseUrl).host.toLowerCase();
+      if (host == 'localhost' || host == '10.0.2.2') return true;
+      if (host.startsWith('192.168.') ||
+          host.startsWith('10.') ||
+          host.startsWith('172.')) {
+        return true;
+      }
+    } catch (_) {}
+    return false;
   }
 }
 

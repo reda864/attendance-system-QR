@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../constants/app_constants.dart';
+import '../l10n/app_strings.dart';
 import '../constants/app_theme.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/auth_provider.dart';
@@ -149,7 +150,7 @@ class _ValidationScreenState extends State<ValidationScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Confirm Attendance'),
+        title: const Text(AppStrings.validateAttendance),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () {
@@ -237,7 +238,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                             CustomTextField(
                               controller: _firstNameController,
                               focusNode: _firstNameFocus,
-                              label: 'First Name',
+                              label: AppStrings.firstName,
                               hint: 'e.g. Mohammed',
                               prefixIcon: Icons.badge_outlined,
                               textCapitalization: TextCapitalization.words,
@@ -255,7 +256,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                             CustomTextField(
                               controller: _lastNameController,
                               focusNode: _lastNameFocus,
-                              label: 'Last Name',
+                              label: AppStrings.lastName,
                               hint: 'e.g. Alaoui',
                               prefixIcon: Icons.badge_outlined,
                               textCapitalization: TextCapitalization.words,
@@ -273,7 +274,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                             CustomTextField(
                               controller: _codeMassarController,
                               focusNode: _codeMassarFocus,
-                              label: 'Code Massar',
+                              label: AppStrings.codeMassar,
                               hint: 'e.g. M123456789',
                               prefixIcon: Icons.numbers_rounded,
                               textCapitalization: TextCapitalization.characters,
@@ -292,7 +293,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                                 return LoadingButton(
                                   onPressed: _handleSubmit,
                                   isLoading: provider.isLoading,
-                                  label: 'Submit Attendance',
+                                  label: AppStrings.submitAttendance,
                                   icon: Icons.how_to_reg_rounded,
                                 );
                               },

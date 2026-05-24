@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_strings.dart';
 import '../constants/app_constants.dart';
 import '../constants/app_theme.dart';
 import '../providers/auth_provider.dart';
@@ -79,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen>
     if (success) {
       Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
     } else {
-      final msg = authProvider.errorMessage ?? 'Login failed. Please try again.';
+      final msg = authProvider.errorMessage ?? AppStrings.loginFailed;
       _showErrorSnackBar(msg);
     }
   }
@@ -165,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         // Title
         Text(
-          'Welcome Back',
+          AppStrings.welcomeBack,
           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -175,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         // Subtitle
         Text(
-          'Sign in to record your attendance',
+          AppStrings.signInSubtitle,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: 15,
               ),
@@ -200,8 +201,8 @@ class _LoginScreenState extends State<LoginScreen>
               CustomTextField(
                 controller: _emailController,
                 focusNode: _emailFocus,
-                label: 'Email Address',
-                hint: 'student@example.com',
+                label: AppStrings.email,
+                hint: AppStrings.emailHint,
                 prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
@@ -218,8 +219,8 @@ class _LoginScreenState extends State<LoginScreen>
               CustomTextField(
                 controller: _passwordController,
                 focusNode: _passwordFocus,
-                label: 'Password',
-                hint: 'Enter your password',
+                label: AppStrings.password,
+                hint: AppStrings.passwordHint,
                 prefixIcon: Icons.lock_outline_rounded,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
@@ -270,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Remember me',
+                            AppStrings.rememberMe,
                             style:
                                 Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       fontSize: 13,
@@ -291,7 +292,7 @@ class _LoginScreenState extends State<LoginScreen>
                   return LoadingButton(
                     onPressed: _handleLogin,
                     isLoading: auth.isLoading,
-                    label: 'Sign In',
+                    label: AppStrings.signIn,
                     icon: Icons.login_rounded,
                   );
                 },
@@ -306,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
-                      'or',
+                      AppStrings.or,
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
@@ -324,7 +325,7 @@ class _LoginScreenState extends State<LoginScreen>
                 onPressed: () => Navigator.of(context)
                     .pushReplacementNamed(AppConstants.routeHome),
                 icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
-                label: const Text('Continue as Guest'),
+                label: Text(AppStrings.continueAsGuest),
               ),
             ],
           ),
@@ -359,7 +360,7 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  'Use your institutional email and password',
+                  AppStrings.loginInfo,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.primary.withOpacity(0.9),

@@ -137,7 +137,7 @@ class AttendanceProvider extends ChangeNotifier {
     final isConnected = await _connectivityService.isConnected();
     if (!isConnected) {
       final result = AttendanceResult.failure(
-        message: 'No internet connection.',
+        message: 'Pas de connexion Internet.',
         type: AttendanceErrorType.noInternet,
       );
       _applyResult(result);

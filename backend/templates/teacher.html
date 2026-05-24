@@ -1,155 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Teacher Dashboard — QR Attendance</title>
+        <title>Tableau de bord enseignant — PrésenceQR</title>
+        <link rel="stylesheet" href="/dashboard.css" />
         <style>
-            *,
-            *::before,
-            *::after {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-
-            :root {
-                --bg: #0d1117;
-                --surface: #161b22;
-                --surface2: #1c2230;
-                --border: #30363d;
-                --accent: #2f81f7;
-                --accent-h: #1f6feb;
-                --text: #e6edf3;
-                --muted: #8b949e;
-                --green: #3fb950;
-                --red: #f97583;
-                --yellow: #e3b341;
-                --orange: #f0883e;
-                --purple: #d2a8ff;
-            }
-
-            body {
-                font-family:
-                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                    sans-serif;
-                background: var(--bg);
-                color: var(--text);
-                min-height: 100vh;
-                display: flex;
-                flex-direction: column;
-            }
-
-            /* ── NAV ── */
-            nav {
-                background: var(--surface);
-                border-bottom: 1px solid var(--border);
-                padding: 0 1.5rem;
-                height: 58px;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                position: sticky;
-                top: 0;
-                z-index: 100;
-                flex-shrink: 0;
-            }
-
-            .nav-brand {
-                display: flex;
-                align-items: center;
-                gap: 0.6rem;
-                font-weight: 700;
-                font-size: 1.05rem;
-            }
-
-            .nav-brand-icon {
-                width: 34px;
-                height: 34px;
-                background: linear-gradient(135deg, var(--accent), #6e40c9);
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1rem;
-            }
-
-            .nav-right {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-            }
-
-            .user-pill {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                background: var(--surface2);
-                border: 1px solid var(--border);
-                border-radius: 20px;
-                padding: 0.3rem 0.9rem 0.3rem 0.45rem;
-                font-size: 0.85rem;
-            }
-
-            .user-avatar {
-                width: 26px;
-                height: 26px;
-                background: linear-gradient(135deg, var(--accent), #6e40c9);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 0.75rem;
-                font-weight: 700;
-            }
-
-            .badge {
-                display: inline-block;
-                padding: 0.15rem 0.5rem;
-                border-radius: 10px;
-                font-size: 0.7rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-            }
-            .badge-teacher {
-                background: #1a2f4b;
-                color: #79c0ff;
-            }
-            .badge-present {
-                background: #1c3d2e;
-                color: var(--green);
-            }
-            .badge-live {
-                background: #3d1c1c;
-                color: var(--red);
-                animation: pulse 1.5s infinite;
-            }
-
-            @keyframes pulse {
-                0%,
-                100% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0.5;
-                }
-            }
-
-            .btn-icon {
-                background: transparent;
-                border: 1px solid var(--border);
-                color: var(--text);
-                border-radius: 8px;
-                padding: 0.35rem 0.7rem;
-                cursor: pointer;
-                font-size: 0.85rem;
-                transition: background 0.15s;
-            }
-            .btn-icon:hover {
-                background: var(--surface2);
-            }
-
             /* ── LAYOUT ── */
             .layout {
                 display: flex;
@@ -833,16 +689,16 @@
         <nav>
             <div class="nav-brand">
                 <div class="nav-brand-icon">📋</div>
-                QR Attendance
+                PrésenceQR
             </div>
             <div class="nav-right">
                 <div class="user-pill">
                     <div class="user-avatar" id="avatarInitials">?</div>
-                    <span id="navUserName">Loading…</span>
-                    <span class="badge badge-teacher">Teacher</span>
+                    <span id="navUserName">Chargement…</span>
+                    <span class="badge badge-teacher">Enseignant</span>
                 </div>
                 <button class="btn-icon" onclick="API.logout()">
-                    ⎋ Logout
+                    ⎋ Déconnexion
                 </button>
             </div>
         </nav>
@@ -852,7 +708,8 @@
             <!-- SIDEBAR: Courses + Sessions -->
             <aside class="sidebar">
                 <div class="sidebar-header">
-                    <h2>📚 My Courses</h2>
+                    <h2>📚 Mes cours</h2>
+                    <button class="btn sm outline" type="button" onclick="showLiveDashboard()">📡 En direct</button>
                 </div>
                 <div class="sidebar-content" id="coursesContainer">
                     <div
@@ -863,7 +720,7 @@
                             font-size: 0.88rem;
                         "
                     >
-                        Loading courses…
+                        Chargement des cours…
                     </div>
                 </div>
             </aside>
@@ -872,10 +729,10 @@
             <section class="main-panel" id="mainPanel">
                 <div class="empty-state">
                     <div class="icon">📡</div>
-                    <h2>Select a session</h2>
+                    <h2>Sélectionnez une séance</h2>
                     <p>
-                        Choose a course and session from the left panel to
-                        manage attendance and generate QR codes.
+                        Choisissez un cours et une séance pour gérer les
+                        présences et générer un code QR.
                     </p>
                 </div>
             </section>
@@ -980,6 +837,7 @@
         <div id="toast"></div>
 
         <script src="/api.js"></script>
+        <script src="/i18n-fr.js"></script>
         <script>
             /* ═══════════════════════════════════════════════════════════
    STATE
@@ -993,7 +851,9 @@
             let qrCountdownTimer = null;
             let qrModalCountdownTimer = null;
             let activeWS = null;
+            let teacherLiveWS = null;
             let attendanceRows = []; // for the current session
+            let liveAttendanceRows = []; // all courses live feed
 
             /* ═══════════════════════════════════════════════════════════
    INIT
@@ -1011,6 +871,9 @@
                 }
 
                 await loadCourses();
+                await loadLiveAttendance();
+                showLiveDashboard();
+                connectTeacherLiveWS();
             })();
 
             /* ═══════════════════════════════════════════════════════════
@@ -1194,11 +1057,181 @@
                 });
 
             /* ═══════════════════════════════════════════════════════════
+   LIVE DASHBOARD (all my courses)
+═══════════════════════════════════════════════════════════ */
+            async function loadLiveAttendance() {
+                try {
+                    const data = await API.apiFetch("/attendance/");
+                    liveAttendanceRows = Array.isArray(data)
+                        ? data
+                        : data.results || [];
+                } catch {
+                    liveAttendanceRows = [];
+                }
+            }
+
+            function showLiveDashboard() {
+                activeSessionId = null;
+                document
+                    .querySelectorAll(".session-item")
+                    .forEach((el) => el.classList.remove("selected"));
+
+                if (activeWS) {
+                    activeWS.close();
+                    activeWS = null;
+                }
+
+                const mainPanel = document.getElementById("mainPanel");
+                mainPanel.innerHTML = `
+    <div class="session-detail-header">
+      <div class="session-detail-title">
+        <h1>📡 Présences en direct</h1>
+        <p>Scans en temps réel sur tous vos cours</p>
+      </div>
+      <div class="ws-status">
+        <div class="ws-dot" id="teacherLiveWsDot"></div>
+        <span id="teacherLiveWsStatus">Connecting…</span>
+      </div>
+    </div>
+    <div class="attendance-section">
+      <div class="attendance-section-header">
+        <h3>
+          Scans récents
+          <span id="liveAttendanceCount" style="font-size:.8rem;color:var(--muted);font-weight:400">—</span>
+        </h3>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student</th>
+            <th>Code Massar</th>
+            <th>Course</th>
+            <th>Session Date</th>
+            <th>Scanned At</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="liveAttendanceBody">
+          <tr class="empty-row"><td colspan="7">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+                renderLiveAttendance();
+                updateTeacherLiveWsUI(teacherLiveWS?.readyState === WebSocket.OPEN ? "connected" : "disconnected");
+            }
+
+            function renderLiveAttendance() {
+                const tbody = document.getElementById("liveAttendanceBody");
+                const countEl = document.getElementById("liveAttendanceCount");
+                if (!tbody) return;
+
+                if (countEl) {
+                    countEl.textContent = `${liveAttendanceRows.length} scan${liveAttendanceRows.length !== 1 ? "s" : ""}`;
+                }
+
+                if (!liveAttendanceRows.length) {
+                    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">
+      Aucune présence. Sélectionnez une séance et générez un QR pour les étudiants.
+    </td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = liveAttendanceRows
+                    .map((r, i) => liveAttendanceRowHtml(r, i + 1))
+                    .join("");
+            }
+
+            function liveAttendanceRowHtml(r, idx) {
+                return `
+    <tr>
+      <td style="color:var(--muted)">${idx}</td>
+      <td><strong>${esc(r.student_name)}</strong></td>
+      <td style="font-family:monospace;color:var(--accent)">${esc(r.student_code_massar)}</td>
+      <td>${esc(r.course_title)} <span style="color:var(--muted);font-size:.78rem">(${esc(r.course_code)})</span></td>
+      <td style="color:var(--muted)">${formatDate(r.session_date)}</td>
+      <td style="color:var(--muted);font-size:.8rem">${formatDateTime(r.validation_time)}</td>
+      <td><span class="badge badge-present">Present</span></td>
+    </tr>
+  `;
+            }
+
+            function handleTeacherLiveRecord(record) {
+                if (liveAttendanceRows.some((r) => r.id === record.id)) return;
+                liveAttendanceRows.unshift(record);
+
+                const liveBody = document.getElementById("liveAttendanceBody");
+                if (liveBody) {
+                    const empty = liveBody.querySelector(".empty-row");
+                    if (empty) empty.remove();
+                    const tr = document.createElement("tr");
+                    tr.className = "new-row";
+                    tr.innerHTML = `
+      <td style="color:var(--muted)">1</td>
+      <td><strong>${esc(record.student_name)}</strong></td>
+      <td style="font-family:monospace;color:var(--accent)">${esc(record.student_code_massar)}</td>
+      <td>${esc(record.course_title)} <span style="color:var(--muted);font-size:.78rem">(${esc(record.course_code)})</span></td>
+      <td style="color:var(--muted)">${formatDate(record.session_date)}</td>
+      <td style="color:var(--muted);font-size:.8rem">${formatDateTime(record.validation_time)}</td>
+      <td><span class="badge badge-present">Present</span></td>
+    `;
+                    liveBody.prepend(tr);
+                    liveBody.querySelectorAll("tr:not(.empty-row)").forEach((row, i) => {
+                        const cell = row.querySelector("td");
+                        if (cell) cell.textContent = i + 1;
+                    });
+                    const countEl = document.getElementById("liveAttendanceCount");
+                    if (countEl) {
+                        countEl.textContent = `${liveAttendanceRows.length} scan${liveAttendanceRows.length !== 1 ? "s" : ""}`;
+                    }
+                }
+
+                if (activeSessionId && String(record.session) === String(activeSessionId)) {
+                    addAttendanceRow(record);
+                } else {
+                    showToast(
+                        t('studentScanned', { name: record.student_name }),
+                        "info",
+                    );
+                }
+            }
+
+            function connectTeacherLiveWS() {
+                if (!currentUser?.id) return;
+                if (teacherLiveWS) teacherLiveWS.close();
+                teacherLiveWS = API.connectAttendanceWs(
+                    `/ws/attendance/live/teacher/${currentUser.id}/`,
+                    handleTeacherLiveRecord,
+                    updateTeacherLiveWsUI,
+                );
+            }
+
+            function updateTeacherLiveWsUI(status) {
+                const dot = document.getElementById("teacherLiveWsDot");
+                const text = document.getElementById("teacherLiveWsStatus");
+                if (!dot || !text) return;
+                if (status === "connected") {
+                    dot.className = "ws-dot connected";
+                    text.textContent = t('live');
+                } else if (status === "error") {
+                    dot.className = "ws-dot error";
+                    text.textContent = t('connectionError');
+                } else {
+                    dot.className = "ws-dot";
+                    text.textContent = t('disconnected');
+                }
+            }
+
+            /* ═══════════════════════════════════════════════════════════
    SELECT SESSION — renders the main panel
 ═══════════════════════════════════════════════════════════ */
             function selectSession(sessionId, courseId) {
-                // Disconnect previous WS
-                disconnectWS();
+                // Disconnect previous session WS only
+                if (activeWS) {
+                    activeWS.close();
+                    activeWS = null;
+                }
 
                 activeSessionId = sessionId;
                 activeCourseId = courseId;
@@ -1228,8 +1261,8 @@
         <p>📅 ${formatDate(session?.date)} &nbsp;·&nbsp; Session #${session?.id}</p>
       </div>
       <div class="action-row">
-        <button class="btn green" id="btnGenQR">🔲 Generate QR</button>
-        <button class="btn outline" id="btnExport">📥 Export Excel</button>
+        <button class="btn green" id="btnGenQR">🔲 Générer le QR</button>
+        <button class="btn outline" id="btnExport">📥 Exporter Excel</button>
       </div>
     </div>
 
@@ -1240,7 +1273,7 @@
     <div class="attendance-section">
       <div class="attendance-section-header">
         <h3>
-          📋 Attendance
+          📋 Présences
           <span id="attendanceCount" style="font-size:.8rem;color:var(--muted);font-weight:400">— students</span>
         </h3>
         <div class="ws-status">
@@ -1252,11 +1285,11 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Student Name</th>
+            <th>Nom étudiant</th>
             <th>Code Massar</th>
-            <th>Field</th>
-            <th>Scanned At</th>
-            <th>Status</th>
+            <th>Filière</th>
+            <th>Scanné à</th>
+            <th>Statut</th>
           </tr>
         </thead>
         <tbody id="attendanceBody">
@@ -1480,10 +1513,10 @@
                         (r, i) => `
     <tr>
       <td style="color:var(--muted)">${i + 1}</td>
-      <td><strong>${esc(r.student_name || r.student?.first_name + " " + r.student?.last_name || "—")}</strong></td>
-      <td style="font-family:monospace;color:var(--accent)">${esc(r.student?.code_massar || r.code_massar || "—")}</td>
-      <td style="color:var(--muted)">${esc(r.student?.field || r.field || "—")}</td>
-      <td style="color:var(--muted);font-size:.8rem">${formatDateTime(r.scanned_at || r.created_at)}</td>
+      <td><strong>${esc(r.student_name || "—")}</strong></td>
+      <td style="font-family:monospace;color:var(--accent)">${esc(r.student_code_massar || "—")}</td>
+      <td style="color:var(--muted)">${esc(r.student_field || "—")}</td>
+      <td style="color:var(--muted);font-size:.8rem">${formatDateTime(r.validation_time)}</td>
       <td><span class="badge badge-present">Present</span></td>
     </tr>
   `,
@@ -1514,10 +1547,10 @@
                 tr.className = "new-row";
                 tr.innerHTML = `
     <td style="color:var(--muted)">${idx}</td>
-    <td><strong>${esc(record.student_name || record.student?.first_name + " " + record.student?.last_name || "—")}</strong></td>
-    <td style="font-family:monospace;color:var(--accent)">${esc(record.student?.code_massar || record.code_massar || "—")}</td>
-    <td style="color:var(--muted)">${esc(record.student?.field || record.field || "—")}</td>
-    <td style="color:var(--muted);font-size:.8rem">${formatDateTime(record.scanned_at || record.created_at)}</td>
+    <td><strong>${esc(record.student_name || "—")}</strong></td>
+    <td style="font-family:monospace;color:var(--accent)">${esc(record.student_code_massar || "—")}</td>
+    <td style="color:var(--muted)">${esc(record.student_field || "—")}</td>
+    <td style="color:var(--muted);font-size:.8rem">${formatDateTime(record.validation_time)}</td>
     <td><span class="badge badge-present">Present</span></td>
   `;
                 tbody.prepend(tr); // newest on top
@@ -1535,36 +1568,23 @@
                 const wsDot = document.getElementById("wsDot");
                 const wsStatus = document.getElementById("wsStatusText");
 
-                const wsUrl = `ws://localhost:8000/ws/attendance/${sessionId}/`;
-
                 try {
-                    activeWS = new WebSocket(wsUrl);
-
-                    activeWS.onopen = () => {
-                        if (wsDot) wsDot.className = "ws-dot connected";
-                        if (wsStatus) wsStatus.textContent = "Live";
-                    };
-
-                    activeWS.onmessage = (event) => {
-                        try {
-                            const data = JSON.parse(event.data);
-                            // Handle both a single record and a {type, data} wrapper
-                            const record = data.data || data;
-                            if (record && (record.id || record.student)) {
-                                addAttendanceRow(record);
+                    activeWS = API.connectAttendanceWs(
+                        `/ws/attendance/${sessionId}/`,
+                        (record) => addAttendanceRow(record),
+                        (status) => {
+                            if (status === "connected") {
+                                if (wsDot) wsDot.className = "ws-dot connected";
+                                if (wsStatus) wsStatus.textContent = "Live";
+                            } else if (status === "error") {
+                                if (wsDot) wsDot.className = "ws-dot error";
+                                if (wsStatus) wsStatus.textContent = "Connection error";
+                            } else {
+                                if (wsDot) wsDot.className = "ws-dot";
+                                if (wsStatus) wsStatus.textContent = "Disconnected";
                             }
-                        } catch {}
-                    };
-
-                    activeWS.onerror = () => {
-                        if (wsDot) wsDot.className = "ws-dot error";
-                        if (wsStatus) wsStatus.textContent = "Connection error";
-                    };
-
-                    activeWS.onclose = () => {
-                        if (wsDot) wsDot.className = "ws-dot";
-                        if (wsStatus) wsStatus.textContent = "Disconnected";
-                    };
+                        },
+                    );
                 } catch (e) {
                     if (wsDot) wsDot.className = "ws-dot error";
                     if (wsStatus) wsStatus.textContent = "WS unavailable";

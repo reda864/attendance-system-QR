@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AllAttendanceListView,
     ExportAttendanceView,
     SessionAttendanceListView,
     ValidateAttendanceView,
@@ -8,6 +9,7 @@ from .views import (
 
 urlpatterns = [
     path("validate/", ValidateAttendanceView.as_view(), name="attendance-validate"),
+    path("", AllAttendanceListView.as_view(), name="attendance-list"),
     path(
         "session/<int:session_id>/",
         SessionAttendanceListView.as_view(),

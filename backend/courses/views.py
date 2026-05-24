@@ -46,10 +46,16 @@ class SessionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == "admin":
-            return Session.objects.select_related("course__teacher").all()
-        return Session.objects.select_related("course__teacher").filter(
-            course__teacher=user
-        )
+            qs = Session.objects.select_related("course__teacher").all()
+        else:
+            qs = Session.objects.select_related("course__teacher").filter(
+                course__teacher=user
+            )
+
+        course_id = self.request.query_params.get("course")
+        if course_id:
+            qs = qs.filter(course_id=course_id)
+        return qs
 
     @action(detail=True, methods=["post"], url_path="generate-qr")
     def generate_qr(self, request, pk=None):

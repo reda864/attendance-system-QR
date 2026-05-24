@@ -184,6 +184,63 @@ async function requireAuth(allowedRoles) {
   }
 }
 
+/* ─── WebSocket helpers ─────────────────────────────────────────────────── */
+
+function getWsBase() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${window.location.host}`;
+}
+
+function connectAttendanceWs(path, onMessage, onStatus) {
+  const ws = new WebSocket(`${getWsBase()}${path}`);
+
+  ws.onopen = () => onStatus?.('connected');
+  ws.onerror = () => onStatus?.('error');
+  ws.onclose = () => onStatus?.('disconnected');
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      const record = data.data || data;
+      if (record && record.id) onMessage(record);
+    } catch {}
+  };
+
+  return ws;
+}
+
+function formatDateTime(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 /* ─── Expose global window.API ──────────────────────────────────────────── */
 
 window.API = {
@@ -197,4 +254,9 @@ window.API = {
   getMe,
   logout,
   requireAuth,
+  getWsBase,
+  connectAttendanceWs,
+  formatDateTime,
+  formatDate,
+  esc,
 };

@@ -56,12 +56,12 @@ class AttendanceService {
       return AttendanceResult.failure(message: message);
     } on NetworkException {
       return AttendanceResult.failure(
-        message: 'No internet connection.',
+        message: 'Pas de connexion Internet.',
         type: AttendanceErrorType.noInternet,
       );
     } on TimeoutException {
       return AttendanceResult.failure(
-        message: 'Request timed out.',
+        message: 'Délai de la requête dépassé.',
         type: AttendanceErrorType.timeout,
       );
     } on ValidationException catch (e) {
@@ -70,7 +70,7 @@ class AttendanceService {
       return AttendanceResult.failure(message: e.message);
     } catch (e) {
       return AttendanceResult.failure(
-        message: 'An unexpected error occurred.',
+        message: 'Une erreur inattendue s\'est produite.',
         type: AttendanceErrorType.unknown,
       );
     }

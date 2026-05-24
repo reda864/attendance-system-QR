@@ -66,6 +66,18 @@ def serve_js(filename):
     return view
 
 
+def serve_css(filename):
+    """Serve a CSS file from the templates/ folder."""
+
+    def view(request):
+        path_ = os.path.join(settings.BASE_DIR, "templates", filename)
+        if not os.path.exists(path_):
+            raise Http404(f"{filename} not found")
+        return FileResponse(open(path_, "rb"), content_type="text/css")
+
+    return view
+
+
 # ---------------------------------------------------------------------------
 # API v1 URL patterns
 # ---------------------------------------------------------------------------
@@ -91,6 +103,8 @@ urlpatterns = [
     path("student/", serve_template("student.html"), name="student-page"),
     # Shared JS asset
     path("api.js", serve_js("api.js"), name="api-js"),
+    path("i18n-fr.js", serve_js("i18n-fr.js"), name="i18n-fr"),
+    path("dashboard.css", serve_css("dashboard.css"), name="dashboard-css"),
     # ── Django admin ──────────────────────────────────────────────────────────
     path("admin/", admin.site.urls),
     # ── API v1 ────────────────────────────────────────────────────────────────

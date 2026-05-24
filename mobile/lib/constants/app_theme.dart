@@ -3,16 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // ─── Brand Palette ────────────────────────────────────────────────────────
-  static const Color primary = Color(0xFF1A73E8);
-  static const Color primaryDark = Color(0xFF0D47A1);
-  static const Color primaryLight = Color(0xFFE8F0FE);
+  static const Color primary = Color(0xFF4F46E5);
+  static const Color primaryDark = Color(0xFF4338CA);
+  static const Color primaryLight = Color(0xFFEEF2FF);
   static const Color accent = Color(0xFF34A853);
   static const Color errorColor = Color(0xFFEA4335);
   static const Color warningColor = Color(0xFFFBBC04);
   static const Color successColor = Color(0xFF34A853);
 
   // Light
-  static const Color lightBackground = Color(0xFFF8F9FA);
+  static const Color lightBackground = Color(0xFFF4F6FB);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightCard = Color(0xFFFFFFFF);
   static const Color lightTextPrimary = Color(0xFF202124);

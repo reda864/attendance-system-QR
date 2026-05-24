@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_strings.dart';
 import '../constants/app_constants.dart';
 import '../constants/app_theme.dart';
 import '../models/attendance_model.dart';
@@ -57,13 +58,12 @@ class _HomeScreenState extends State<HomeScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Sign Out'),
-        content: const Text(
-            'Are you sure you want to sign out of your account?'),
+        title: const Text(AppStrings.signOut),
+        content: const Text(AppStrings.signOutConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: const Text(AppStrings.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -71,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen>
               backgroundColor: AppTheme.errorColor,
               minimumSize: const Size(80, 40),
             ),
-            child: const Text('Sign Out'),
+            child: const Text(AppStrings.signOut),
           ),
         ],
       ),
@@ -161,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen>
                           size: 22,
                         ),
                         onPressed: () => themeProvider.toggleTheme(),
-                        tooltip: 'Toggle Theme',
+                        tooltip: AppStrings.toggleTheme,
                       ),
                       // Logout
                       if (authProvider.isLoggedIn)
@@ -170,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen>
                               Icons.logout_rounded,
                               size: 22),
                           onPressed: _handleLogout,
-                          tooltip: 'Sign Out',
+                          tooltip: AppStrings.signOut,
                         )
                       else
                         IconButton(
@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen>
                               size: 22),
                           onPressed: () => Navigator.of(context)
                               .pushNamed(AppConstants.routeLogin),
-                          tooltip: 'Sign In',
+                          tooltip: AppStrings.signInAction,
                         ),
                       const SizedBox(width: 4),
                     ],
@@ -214,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Recent Activity',
+                                AppStrings.recentActivity,
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleLarge
@@ -224,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 onPressed: _loadHistory,
                                 icon: const Icon(Icons.refresh_rounded,
                                     size: 16),
-                                label: const Text('Refresh'),
+                                label: const Text(AppStrings.refresh),
                                 style: TextButton.styleFrom(
                                   foregroundColor: AppTheme.primary,
                                   padding: EdgeInsets.zero,
@@ -260,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen>
         elevation: 4,
         icon: const Icon(Icons.qr_code_scanner_rounded),
         label: const Text(
-          'Scan QR',
+          AppStrings.scanQr,
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
@@ -278,9 +278,9 @@ class _WelcomeBanner extends StatelessWidget {
 
   String get _greeting {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return AppStrings.goodMorning;
+    if (hour < 17) return AppStrings.goodAfternoon;
+    return AppStrings.goodEvening;
   }
 
   @override
@@ -327,7 +327,7 @@ class _WelcomeBanner extends StatelessWidget {
                       ? (user.fullName.isNotEmpty
                           ? user.fullName
                           : user.email)
-                      : 'Student',
+                      : AppStrings.student,
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -362,7 +362,7 @@ class _WelcomeBanner extends StatelessWidget {
                       Icon(Icons.circle, size: 8, color: Colors.greenAccent),
                       SizedBox(width: 6),
                       Text(
-                        'Ready to scan',
+                        AppStrings.readyToScan,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.white,
@@ -474,7 +474,7 @@ class _ScanQrButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Scan QR Code',
+                  AppStrings.scanQrCode,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primary,
@@ -482,7 +482,7 @@ class _ScanQrButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Point your camera at the teacher\'s\nQR code to mark attendance',
+                  AppStrings.scanQrHint,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 13,
@@ -503,7 +503,7 @@ class _ScanQrButton extends StatelessWidget {
                           size: 16, color: AppTheme.primary),
                       SizedBox(width: 6),
                       Text(
-                        'Tap to open scanner',
+                        AppStrings.tapToOpenScanner,
                         style: TextStyle(
                           color: AppTheme.primary,
                           fontWeight: FontWeight.w600,
@@ -528,10 +528,9 @@ class _QuickTips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tips = [
-      (Icons.wifi_rounded, 'Stay connected', 'Ensure you have internet access'),
-      (Icons.timer_outlined, 'Scan on time', 'QR codes expire after session'),
-      (Icons.verified_user_outlined, 'One scan only',
-          'Duplicate scans are blocked'),
+      (Icons.wifi_rounded, AppStrings.tipConnected, AppStrings.tipConnectedDesc),
+      (Icons.timer_outlined, AppStrings.tipOnTime, AppStrings.tipOnTimeDesc),
+      (Icons.verified_user_outlined, AppStrings.tipOneScan, AppStrings.tipOneScanDesc),
     ];
 
     return Row(
@@ -602,7 +601,7 @@ class _AttendanceHistorySliver extends StatelessWidget {
             hasScrollBody: false,
             child: _HistoryErrorState(
               message: provider.historyErrorMessage ??
-                  'Could not load attendance history.',
+                  AppStrings.historyLoadError,
               onRetry: () => provider.loadAttendanceHistory(refresh: true),
             ),
           );
@@ -753,7 +752,7 @@ class _AttendanceHistoryCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
-                'Present',
+                AppStrings.present,
                 style: TextStyle(
                   fontSize: 11,
                   color: AppTheme.successColor,
@@ -790,7 +789,7 @@ class _EmptyHistoryState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'No attendance records yet',
+            AppStrings.noAttendanceYet,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context)
                       .colorScheme
@@ -800,7 +799,7 @@ class _EmptyHistoryState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Scan a QR code to register\nyour first attendance',
+            AppStrings.noAttendanceHint,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 13,
@@ -841,7 +840,7 @@ class _HistoryErrorState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Could not load history',
+            AppStrings.couldNotLoadHistory,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
@@ -856,7 +855,7 @@ class _HistoryErrorState extends StatelessWidget {
           TextButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Try Again'),
+            label: const Text(AppStrings.tryAgain),
             style: TextButton.styleFrom(foregroundColor: AppTheme.primary),
           ),
         ],

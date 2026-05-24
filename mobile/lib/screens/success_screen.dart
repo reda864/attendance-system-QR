@@ -270,7 +270,7 @@ class _SuccessScreenState extends State<SuccessScreen>
     return Column(
       children: [
         Text(
-          'Attendance Registered!',
+          'Présence enregistrée !',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppTheme.successColor,
@@ -279,7 +279,7 @@ class _SuccessScreenState extends State<SuccessScreen>
         ),
         const SizedBox(height: 10),
         Text(
-          'Your attendance has been successfully\nrecorded for this session.',
+          'Votre présence a bien été enregistrée\npour cette séance.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: 15,
@@ -360,7 +360,7 @@ class _SuccessScreenState extends State<SuccessScreen>
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Attendance Receipt',
+                  'Reçu de présence',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppTheme.successColor,
@@ -470,7 +470,7 @@ class _SuccessScreenState extends State<SuccessScreen>
         ElevatedButton.icon(
           onPressed: _goHome,
           icon: const Icon(Icons.home_rounded, size: 20),
-          label: const Text('Back to Home'),
+            label: const Text('Retour à l\'accueil'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.successColor,
             foregroundColor: Colors.white,

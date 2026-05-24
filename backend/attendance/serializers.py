@@ -12,6 +12,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     session_date = serializers.DateField(source="session.date", read_only=True)
     course_title = serializers.CharField(source="session.course.title", read_only=True)
     course_code = serializers.CharField(source="session.course.code", read_only=True)
+    teacher_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Attendance
@@ -25,6 +26,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "session_date",
             "course_title",
             "course_code",
+            "teacher_name",
             "validation_time",
             "ip_address",
             "device_id",
@@ -33,6 +35,10 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
     def get_student_name(self, obj):
         return f"{obj.student.first_name} {obj.student.last_name}"
+
+    def get_teacher_name(self, obj):
+        teacher = obj.session.course.teacher
+        return f"{teacher.first_name} {teacher.last_name}"
 
 
 class ValidateAttendanceSerializer(serializers.Serializer):

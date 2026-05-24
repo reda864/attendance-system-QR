@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_strings.dart';
 import '../constants/app_constants.dart';
 import '../constants/app_theme.dart';
 import '../providers/attendance_provider.dart';
@@ -149,7 +150,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
-                  'Invalid QR code. Please scan the teacher\'s attendance QR.',
+                  AppStrings.invalidQr,
                   style: TextStyle(fontSize: 13),
                 ),
               ),
@@ -244,7 +245,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       foregroundColor: Colors.white,
       elevation: 0,
       title: const Text(
-        'Scan QR Code',
+        AppStrings.scanQrCode,
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,
@@ -281,7 +282,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             ),
           ),
           onPressed: _toggleTorch,
-          tooltip: 'Toggle flashlight',
+          tooltip: AppStrings.toggleFlash,
         ),
         // Flip camera
         IconButton(
@@ -295,7 +296,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 color: Colors.white, size: 20),
           ),
           onPressed: _flipCamera,
-          tooltip: 'Flip camera',
+          tooltip: AppStrings.flipCamera,
         ),
         const SizedBox(width: 4),
       ],
@@ -353,7 +354,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    'Align the QR code within the frame',
+                    AppStrings.alignQr,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 13,
@@ -374,7 +375,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             child: OutlinedButton.icon(
               onPressed: () => Navigator.of(context).maybePop(),
               icon: const Icon(Icons.close_rounded, size: 18),
-              label: const Text('Cancel'),
+              label: const Text(AppStrings.cancel),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
                 side: const BorderSide(color: Colors.white38, width: 1.5),
@@ -604,7 +605,7 @@ class _ProcessingOverlay extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'Processing QR Code…',
+              AppStrings.processingQr,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -640,7 +641,7 @@ class _CameraErrorWidget extends StatelessWidget {
                   color: Colors.white54, size: 64),
               const SizedBox(height: 16),
               const Text(
-                'Camera Unavailable',
+                AppStrings.cameraUnavailable,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -649,8 +650,7 @@ class _CameraErrorWidget extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Could not access the camera.\n'
-                'Please grant camera permission in Settings.',
+                AppStrings.cameraPermission,
                 style: const TextStyle(
                   color: Colors.white60,
                   fontSize: 14,
@@ -669,7 +669,7 @@ class _CameraErrorWidget extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Retry'),
+                label: const Text(AppStrings.retry),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(160, 48),
                 ),

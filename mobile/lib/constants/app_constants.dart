@@ -2,29 +2,33 @@ import 'package:flutter/foundation.dart';
 
 class AppConstants {
   // ─── API Base URL ─────────────────────────────────────────────────────────
-  // Override for a physical device on the same Wi‑Fi as your PC:
-  //   flutter run --dart-define=API_BASE_URL=http://192.168.x.x:8000/api/v1
-  //
-  // Defaults:
-  //   Android emulator → 10.0.2.2 (host loopback)
-  //   iOS simulator / desktop / web → localhost
+  // Physical device on the same Wi‑Fi as your PC (default below).
+  // Android emulator only: use host loopback alias:
+  //   flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+  // Different PC IP:
+  //   flutter run --dart-define=DEV_HOST=192.168.x.x
+  //   or --dart-define=API_BASE_URL=http://192.168.x.x:8000/api/v1
   static const String _apiBaseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
   );
+
+  /// LAN IP of the machine running Django (must match ALLOWED_HOSTS in backend).
+  static const String devHost = String.fromEnvironment(
+    'DEV_HOST',
+    defaultValue: '192.168.1.15',
+  );
+
+  static const int apiPort = 8000;
 
   static String get baseUrl {
     final override = _apiBaseUrlOverride.trim();
     if (override.isNotEmpty) {
       return override.endsWith('/') ? override.substring(0, override.length - 1) : override;
     }
-    if (kIsWeb) return 'http://localhost:8000/api/v1';
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'http://10.0.2.2:8000/api/v1';
-      default:
-        return 'http://localhost:8000/api/v1';
-    }
+    if (kIsWeb) return 'http://localhost:$apiPort/api/v1';
+    // Real phones cannot use localhost or 10.0.2.2 — use your PC's LAN IP.
+    return 'http://$devHost:$apiPort/api/v1';
   }
 
   // ─── Endpoints ────────────────────────────────────────────────────────────
@@ -41,8 +45,8 @@ class AppConstants {
   static const String themeKey = 'theme_mode';
 
   // ─── HTTP timeouts (ms) ───────────────────────────────────────────────────
-  static const int connectTimeout = 10000;
-  static const int receiveTimeout = 15000;
+  static const int connectTimeout = 15000;
+  static const int receiveTimeout = 30000;
 
   // ─── Named routes ─────────────────────────────────────────────────────────
   static const String routeSplash = '/';
@@ -54,6 +58,6 @@ class AppConstants {
   static const String routeError = '/error';
 
   // ─── Misc ─────────────────────────────────────────────────────────────────
-  static const String appName = 'AttendQR';
+  static const String appName = 'PrésenceQR';
   static const String appVersion = '1.0.0';
 }
