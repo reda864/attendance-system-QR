@@ -7,7 +7,7 @@ from .views import LoginView, MeView, StudentViewSet, UserViewSet
 
 urlpatterns = [
     # Auth endpoints
-    path("auth/login/", LoginView.as_view(), name="login"),
-    path("auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
-    path("auth/me/", MeView.as_view(), name="me"),
+    path("login/", LoginView.as_view(), name="login"),
+    path("refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("me/", MeView.as_view(), name="me"),
 ]

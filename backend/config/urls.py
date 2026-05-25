@@ -95,8 +95,8 @@ api_router.register("sessions", SessionViewSet, basename="session")
 api_v1_urlpatterns = [
     # Router viewsets
     path("", include(api_router.urls)),
-    # Auth endpoints (non-routed)
-    path("auth/login/", include("users.urls")),
+    # Auth endpoints
+    path("auth/", include("users.urls")),
     # Attendance validation + listing + export
     path("attendance/", include("attendance.urls")),
 ]
