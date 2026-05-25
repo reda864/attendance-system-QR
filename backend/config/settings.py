@@ -80,27 +80,25 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # ---------------------------------------------------------------------------
-# Database — MySQL (falls back to SQLite for local dev if env vars absent)
+# Database — PostgreSQL (Neon) with SQLite fallback for local dev
 # ---------------------------------------------------------------------------
-import os
-import dj_database_url
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
-from django.db import connection
-from django.http import JsonResponse
-
-def db_test(request):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT current_database();")
-        db = cursor.fetchone()
-
-    return JsonResponse({"db": db})
 # ---------------------------------------------------------------------------
 # Custom user model
 # ---------------------------------------------------------------------------
@@ -128,6 +126,7 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 50,
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
+    "FORMAT_SUFFIX_PATTERNS": False,
 }
 
 # ---------------------------------------------------------------------------

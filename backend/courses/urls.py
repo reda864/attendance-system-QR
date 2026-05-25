@@ -1,12 +1,9 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
 from .views import CourseViewSet, SessionViewSet
 
-router = DefaultRouter()
-router.register("courses", CourseViewSet, basename="course")
-router.register("sessions", SessionViewSet, basename="session")
+# Routers are combined in the main config.urls to avoid converter conflicts
 
 urlpatterns = [
-    path("", include(router.urls)),
+    # Endpoints are registered via the combined router in config.urls
 ]

@@ -1,5 +1,8 @@
 ﻿Django==6.0.5
 gunicorn
+psycopg2-binary==2.9.10
+dj-database-url==1.0.0
+python-dotenv==1.0.1
 
 djangorestframework
 django-cors-headers

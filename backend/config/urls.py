@@ -13,6 +13,10 @@ from django.views.generic import RedirectView, TemplateView
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
+from rest_framework.routers import DefaultRouter
+
+from users.views import UserViewSet, StudentViewSet
+from courses.views import CourseViewSet, SessionViewSet
 
 # ---------------------------------------------------------------------------
 # Swagger / ReDoc schema view
@@ -79,13 +83,20 @@ def serve_css(filename):
 
 
 # ---------------------------------------------------------------------------
-# API v1 URL patterns
+# API v1 router — combines all ViewSets to avoid DRF format_suffix converter conflict
 # ---------------------------------------------------------------------------
+api_router = DefaultRouter()
+api_router.register("users", UserViewSet, basename="user")
+api_router.register("students", StudentViewSet, basename="student")
+api_router.register("courses", CourseViewSet, basename="course")
+api_router.register("sessions", SessionViewSet, basename="session")
+
+# Additional non-routed API patterns
 api_v1_urlpatterns = [
-    # Auth + Users + Students
-    path("", include("users.urls")),
-    # Courses + Sessions (incl. QR generation)
-    path("", include("courses.urls")),
+    # Router viewsets
+    path("", include(api_router.urls)),
+    # Auth endpoints (non-routed)
+    path("auth/login/", include("users.urls")),
     # Attendance validation + listing + export
     path("attendance/", include("attendance.urls")),
 ]
