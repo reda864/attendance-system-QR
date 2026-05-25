@@ -5,6 +5,10 @@ Django settings for QR Attendance System.
 import os
 from datetime import timedelta
 from pathlib import Path
+import dj_database_url
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -78,31 +82,25 @@ ASGI_APPLICATION = "config.asgi.application"
 # ---------------------------------------------------------------------------
 # Database — MySQL (falls back to SQLite for local dev if env vars absent)
 # ---------------------------------------------------------------------------
-_db_engine = os.environ.get("DB_ENGINE", "django.db.backends.sqlite3")
+import os
+import dj_database_url
 
-if _db_engine == "django.db.backends.mysql":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": os.environ.get("DB_NAME", "qr_attendance"),
-            "USER": os.environ.get("DB_USER", "root"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-            "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
-            "PORT": os.environ.get("DB_PORT", "3306"),
-            "OPTIONS": {
-                "charset": "utf8mb4",
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
-        }
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+DATABASES = {
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+        conn_max_age=600,
+        ssl_require=True
+    )
+}
+from django.db import connection
+from django.http import JsonResponse
 
+def db_test(request):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT current_database();")
+        db = cursor.fetchone()
+
+    return JsonResponse({"db": db})
 # ---------------------------------------------------------------------------
 # Custom user model
 # ---------------------------------------------------------------------------
