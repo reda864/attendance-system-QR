@@ -13,6 +13,5 @@ urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("auth/me/", MeView.as_view(), name="me"),
-    # User & Student CRUD
     path("", include(router.urls)),
 ]
