@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PrésenceQR — Connexion</title>
+  <title>PrésenceQR — Administration</title>
   <link rel="stylesheet" href="/dashboard.css" />
 </head>
-<body>
+<body class="dashboard-app">
 <!-- NAV -->
 <nav>
   <div class="nav-brand">
@@ -19,15 +19,24 @@
       <span id="navUserName">Chargement…</span>
       <span class="badge badge-admin">Administrateur</span>
     </div>
-    <button class="btn-icon" onclick="API.logout()">⎋ Déconnexion</button>
+    <button class="btn-icon" onclick="API.logout()" title="Déconnexion">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Déconnexion
+    </button>
   </div>
 </nav>
 
 <!-- MAIN -->
 <main>
-  <div class="page-header">
-    <h1>Tableau de bord administrateur</h1>
-    <p>Gérez les utilisateurs, classes, étudiants, séances et consultez les présences en direct.</p>
+  <div class="page-hero">
+    <div class="page-hero-text">
+      <h1>Tableau de bord administrateur</h1>
+      <p>Gérez les utilisateurs, classes, étudiants, séances et consultez les présences en direct.</p>
+    </div>
+    <div class="page-hero-meta">
+      <span class="hero-chip">📊 <strong id="heroUserCount">—</strong> utilisateurs</span>
+      <span class="hero-chip">🏫 <strong id="heroClassCount">—</strong> classes</span>
+    </div>
   </div>
 
   <!-- TABS -->
@@ -53,16 +62,25 @@
   <div class="tab-panel" id="tab-attendance">
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="label">Total des enregistrements</div>
-        <div class="value" id="statTotal">—</div>
+        <div class="stat-icon indigo">📋</div>
+        <div>
+          <div class="label">Total des enregistrements</div>
+          <div class="value" id="statTotal">—</div>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="label">Aujourd'hui</div>
-        <div class="value" id="statToday">—</div>
+        <div class="stat-icon green">✓</div>
+        <div>
+          <div class="label">Aujourd'hui</div>
+          <div class="value" id="statToday">—</div>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="label">Cours actifs</div>
-        <div class="value" id="statActiveCourses">—</div>
+        <div class="stat-icon purple">📚</div>
+        <div>
+          <div class="label">Matières actives</div>
+          <div class="value" id="statActiveCourses">—</div>
+        </div>
       </div>
     </div>
 
@@ -208,18 +226,18 @@
 <div class="modal-backdrop" id="modalAddUser">
   <div class="modal">
     <div class="modal-header">
-      <h3>Create New User</h3>
-      <button class="modal-close" data-close="modalAddUser">✕</button>
+      <h3>Nouvel utilisateur</h3>
+      <button type="button" class="modal-close" data-close="modalAddUser" aria-label="Fermer">✕</button>
     </div>
     <div class="modal-body">
       <div class="field-row">
         <div class="field">
-          <label>First Name</label>
-          <input type="text" id="uFirstName" placeholder="John" />
+          <label>Prénom</label>
+          <input type="text" id="uFirstName" placeholder="Jean" />
         </div>
         <div class="field">
-          <label>Last Name</label>
-          <input type="text" id="uLastName" placeholder="Doe" />
+          <label>Nom</label>
+          <input type="text" id="uLastName" placeholder="Dupont" />
         </div>
       </div>
       <div class="field">
@@ -227,21 +245,21 @@
         <input type="email" id="uEmail" placeholder="john@school.ma" />
       </div>
       <div class="field">
-        <label>Role</label>
+        <label>Rôle</label>
         <select id="uRole">
-          <option value="teacher">Teacher</option>
+          <option value="teacher">Enseignant</option>
           <option value="admin">Admin</option>
-          <option value="student">Student</option>
+          <option value="student">Étudiant</option>
         </select>
       </div>
       <div class="field">
-        <label>Password</label>
+        <label>Mot de passe</label>
         <input type="password" id="uPassword" placeholder="••••••••" />
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn outline" data-close="modalAddUser">Cancel</button>
-      <button class="btn" id="btnSubmitUser">Create User</button>
+      <button class="btn outline" data-close="modalAddUser">Annuler</button>
+      <button class="btn" id="btnSubmitUser">Créer l'utilisateur</button>
     </div>
   </div>
 </div>
@@ -250,17 +268,17 @@
 <div class="modal-backdrop" id="modalAddStudent">
   <div class="modal">
     <div class="modal-header">
-      <h3>Add New Student</h3>
+      <h3>Ajouter un étudiant</h3>
       <button class="modal-close" data-close="modalAddStudent">✕</button>
     </div>
     <div class="modal-body">
       <div class="field-row">
         <div class="field">
-          <label>First Name</label>
+          <label>Prénom</label>
           <input type="text" id="sFirstName" placeholder="Ayman" />
         </div>
         <div class="field">
-          <label>Last Name</label>
+          <label>Nom</label>
           <input type="text" id="sLastName" placeholder="Benali" />
         </div>
       </div>
@@ -274,8 +292,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn outline" data-close="modalAddStudent">Cancel</button>
-      <button class="btn" id="btnSubmitStudent">Add Student</button>
+      <button class="btn outline" data-close="modalAddStudent">Annuler</button>
+      <button class="btn" id="btnSubmitStudent">Ajouter l'étudiant</button>
     </div>
   </div>
 </div>
@@ -404,6 +422,8 @@
       allUsers = Array.isArray(data) ? data : (data.results || []);
       renderUsers();
       document.getElementById('cntUsers').textContent = allUsers.length;
+      const heroU = document.getElementById('heroUserCount');
+      if (heroU) heroU.textContent = allUsers.length;
     } catch (e) {
       document.getElementById('usersBody').innerHTML =
         `<tr class="empty-row"><td colspan="4">Failed to load users: ${e.message}</td></tr>`;
@@ -513,6 +533,8 @@
       allClasses = Array.isArray(data) ? data : (data.results || []);
       renderClasses();
       document.getElementById('cntClasses').textContent = allClasses.length;
+      const heroC = document.getElementById('heroClassCount');
+      if (heroC) heroC.textContent = allClasses.length;
       populateClasseSelects();
     } catch (e) {
       document.getElementById('classesBody').innerHTML =

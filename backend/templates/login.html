@@ -7,54 +7,69 @@
   <link rel="stylesheet" href="/dashboard.css" />
 </head>
 <body class="login-page">
-  <div class="login-card">
-    <div class="nav-brand" style="margin-bottom:1.5rem">
-      <div class="nav-brand-icon">📋</div>
-      <div>
-        <div style="font-size:1.2rem;font-weight:800">PrésenceQR</div>
-        <div style="font-size:.75rem;color:var(--muted);margin-top:2px">Gestion de présence par QR</div>
+  <aside class="login-brand-panel">
+    <div class="login-brand-content">
+      <div class="nav-brand" style="color:#fff">
+        <div class="nav-brand-icon">📋</div>
+        <span style="font-size:1.15rem;font-weight:800">PrésenceQR</span>
       </div>
+      <h2>La présence en cours,<br/>simplifiée.</h2>
+      <p>
+        Plateforme sécurisée de gestion des présences par QR code pour établissements
+        d'enseignement supérieur.
+      </p>
+      <ul class="login-features">
+        <li>Scan QR en temps réel</li>
+        <li>Tableaux de bord admin & enseignant</li>
+        <li>Export Excel des présences</li>
+        <li>Gestion des classes et séances</li>
+      </ul>
     </div>
+    <p class="login-brand-footer">© 2025 PrésenceQR — Tous droits réservés</p>
+  </aside>
 
-    <h1>Bon retour</h1>
-    <p class="subtitle">Connectez-vous pour accéder à votre espace</p>
+  <div class="login-form-panel">
+    <div class="login-card">
+      <h1>Bon retour</h1>
+      <p class="subtitle">Connectez-vous pour accéder à votre espace</p>
 
-    <form id="loginForm">
-      <div class="field">
-        <label for="email">Adresse e-mail</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          placeholder="vous@exemple.ma"
-          autocomplete="email"
-          required
-        />
-      </div>
+      <form id="loginForm">
+        <div class="field">
+          <label for="email">Adresse e-mail</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="vous@exemple.ma"
+            autocomplete="email"
+            required
+          />
+        </div>
 
-      <div class="field">
-        <label for="password">Mot de passe</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          placeholder="••••••••"
-          autocomplete="current-password"
-          required
-        />
-      </div>
+        <div class="field">
+          <label for="password">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+        </div>
 
-      <button type="submit" class="btn" id="loginBtn">
-        <span class="btn-label">Se connecter</span>
-        <span class="spinner"></span>
-      </button>
+        <button type="submit" class="btn" id="loginBtn">
+          <span class="btn-label">Se connecter</span>
+          <span class="spinner"></span>
+        </button>
 
-      <div class="alert" id="alert"></div>
-    </form>
+        <div class="alert" id="alert"></div>
+      </form>
 
-    <p style="margin-top:1.5rem;text-align:center;font-size:.8rem;color:var(--muted)">
-      PrésenceQR © 2025 — Sécurisé et confidentiel
-    </p>
+      <p style="margin-top:1.75rem;text-align:center;font-size:.78rem;color:var(--muted)">
+        Connexion sécurisée · JWT
+      </p>
+    </div>
   </div>
 
   <script src="/api.js"></script>
