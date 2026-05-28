@@ -4,28 +4,20 @@ from django.db import models
 from django.utils import timezone
 
 
-class Course(models.Model):
-    title = models.CharField(max_length=200)
-    code = models.CharField(max_length=50, unique=True)
+class Session(models.Model):
+    """Séance de cours : matière, enseignant, classe, date."""
+
+    subject = models.CharField(max_length=200, verbose_name="Matière")
     teacher = models.ForeignKey(
         "users.User",
         on_delete=models.CASCADE,
-        related_name="courses",
+        related_name="sessions",
         limit_choices_to={"role": "teacher"},
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "courses"
-        ordering = ["title"]
-
-    def __str__(self):
-        return f"{self.code} — {self.title}"
-
-
-class Session(models.Model):
-    course = models.ForeignKey(
-        Course, on_delete=models.CASCADE, related_name="sessions"
+    classe = models.ForeignKey(
+        "users.Classe",
+        on_delete=models.CASCADE,
+        related_name="sessions",
     )
     date = models.DateField()
     qr_token = models.CharField(max_length=64, unique=True, blank=True)
@@ -38,7 +30,7 @@ class Session(models.Model):
         ordering = ["-date"]
 
     def __str__(self):
-        return f"{self.course.code} — {self.date}"
+        return f"{self.subject} — {self.classe} ({self.date})"
 
     def generate_qr_token(self, expiry_minutes=20):
         from django.conf import settings
@@ -54,3 +46,12 @@ class Session(models.Model):
         if not self.qr_token or not self.qr_expires_at:
             return False
         return timezone.now() < self.qr_expires_at
+
+    def teacher_can_manage(self, user) -> bool:
+        if user.role == "admin":
+            return True
+        if user.role != "teacher":
+            return False
+        if self.teacher_id == user.id:
+            return True
+        return self.classe_id in user.assigned_classes.values_list("pk", flat=True)

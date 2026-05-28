@@ -30,7 +30,6 @@ def get_client_ip(request):
 
 
 def broadcast_attendance(attendance, session):
-    """Push a new attendance record to all relevant WebSocket groups."""
     try:
         channel_layer = get_channel_layer()
         payload = {
@@ -39,7 +38,7 @@ def broadcast_attendance(attendance, session):
         }
         async_to_sync(channel_layer.group_send)(f"attendance_{session.id}", payload)
         async_to_sync(channel_layer.group_send)("attendance_admin", payload)
-        teacher_id = session.course.teacher_id
+        teacher_id = session.teacher_id
         if teacher_id:
             async_to_sync(channel_layer.group_send)(
                 f"attendance_teacher_{teacher_id}", payload
@@ -78,29 +77,26 @@ class ValidateAttendanceView(APIView):
 
 
 class AllAttendanceListView(ListAPIView):
-    """List attendance records — all for admin, own courses for teachers."""
-
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated, IsAdminOrTeacher]
 
     def get_queryset(self):
-        qs = (
-            Attendance.objects.select_related(
-                "student", "session__course", "session__course__teacher"
-            )
-            .order_by("-validation_time")
-        )
+        qs = Attendance.objects.select_related(
+            "student__classe",
+            "session__teacher",
+            "session__classe",
+        ).order_by("-validation_time")
 
         user = self.request.user
         if user.role == "teacher":
-            qs = qs.filter(session__course__teacher=user)
+            qs = qs.filter(session__teacher=user)
 
         session_id = self.request.query_params.get("session")
-        course_id = self.request.query_params.get("course")
+        classe_id = self.request.query_params.get("classe")
         if session_id:
             qs = qs.filter(session_id=session_id)
-        if course_id:
-            qs = qs.filter(session__course_id=course_id)
+        if classe_id:
+            qs = qs.filter(session__classe_id=classe_id)
 
         return qs
 
@@ -115,19 +111,17 @@ class SessionAttendanceListView(ListAPIView):
 
         if user.role == "teacher":
             try:
-                session = Session.objects.select_related("course__teacher").get(
+                session = Session.objects.select_related("teacher", "classe").get(
                     pk=session_id
                 )
             except Session.DoesNotExist:
                 return Attendance.objects.none()
-            if session.course.teacher != user:
+            if not session.teacher_can_manage(user):
                 return Attendance.objects.none()
 
-        return (
-            Attendance.objects.select_related("student", "session__course")
-            .filter(session_id=session_id)
-            .order_by("-validation_time")
-        )
+        return Attendance.objects.select_related(
+            "student__classe", "session__teacher", "session__classe"
+        ).filter(session_id=session_id).order_by("-validation_time")
 
 
 class ExportAttendanceView(APIView):
@@ -135,7 +129,7 @@ class ExportAttendanceView(APIView):
 
     def get(self, request, session_id):
         try:
-            session = Session.objects.select_related("course__teacher").get(
+            session = Session.objects.select_related("teacher", "classe").get(
                 pk=session_id
             )
         except Session.DoesNotExist:
@@ -143,29 +137,27 @@ class ExportAttendanceView(APIView):
                 {"error": "Session not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Check ownership for teachers
-        if request.user.role == "teacher" and session.course.teacher != request.user:
+        if not session.teacher_can_manage(request.user):
             return Response({"error": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
 
         attendances = Attendance.objects.select_related(
-            "student", "session__course"
+            "student__classe", "session"
         ).filter(session=session)
 
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = f"Attendance - {session.course.code}"
+        ws.title = f"Présence - {session.subject[:20]}"
 
-        # Header styling
         headers = [
             "#",
-            "First Name",
-            "Last Name",
+            "Prénom",
+            "Nom",
             "Code Massar",
-            "Field",
-            "Course",
-            "Session Date",
-            "Validation Time",
-            "IP Address",
+            "Classe",
+            "Matière",
+            "Date séance",
+            "Heure validation",
+            "Adresse IP",
         ]
         ws.append(headers)
 
@@ -180,7 +172,6 @@ class ExportAttendanceView(APIView):
             cell.fill = header_fill
             cell.alignment = Alignment(horizontal="center")
 
-        # Data rows
         for idx, att in enumerate(attendances, start=1):
             local_time = timezone.localtime(att.validation_time)
             ws.append(
@@ -189,15 +180,14 @@ class ExportAttendanceView(APIView):
                     att.student.first_name,
                     att.student.last_name,
                     att.student.code_massar,
-                    att.student.field,
-                    session.course.title,
+                    att.student.classe.name,
+                    session.subject,
                     str(session.date),
                     local_time.strftime("%Y-%m-%d %H:%M:%S"),
                     att.ip_address or "",
                 ]
             )
 
-        # Auto column width
         for column in ws.columns:
             max_len = max((len(str(cell.value or "")) for cell in column), default=0)
             ws.column_dimensions[column[0].column_letter].width = max_len + 4
@@ -206,7 +196,8 @@ class ExportAttendanceView(APIView):
         wb.save(buffer)
         buffer.seek(0)
 
-        filename = f"attendance_{session.course.code}_{session.date}.xlsx"
+        safe_subject = "".join(c if c.isalnum() else "_" for c in session.subject)[:30]
+        filename = f"presence_{safe_subject}_{session.date}.xlsx"
         response = HttpResponse(
             buffer.read(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -5,7 +5,11 @@ from django.contrib.auth.models import (
 )
 from django.db import models
 
-ROLE_CHOICES = [("admin", "Admin"), ("teacher", "Teacher"), ("student", "Student")]
+ROLE_CHOICES = [
+    ("admin", "Admin"),
+    ("teacher", "Enseignant"),
+    ("student", "Étudiant"),
+]
 
 
 class UserManager(BaseUserManager):
@@ -33,6 +37,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    assigned_classes = models.ManyToManyField(
+        "Classe",
+        blank=True,
+        related_name="teachers",
+        help_text="Classes assignées (enseignants uniquement).",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
@@ -45,12 +55,47 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.role})"
 
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+
+class Classe(models.Model):
+    """Groupe d'étudiants (nom, niveau, filière, année universitaire)."""
+
+    name = models.CharField(max_length=100, verbose_name="Nom de la classe")
+    level = models.CharField(max_length=50, verbose_name="Niveau")
+    field = models.CharField(max_length=100, verbose_name="Filière")
+    academic_year = models.CharField(max_length=20, verbose_name="Année universitaire")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "classes"
+        ordering = ["name", "academic_year"]
+        verbose_name = "Classe"
+        verbose_name_plural = "Classes"
+
+    def __str__(self):
+        return f"{self.name} — {self.field} ({self.academic_year})"
+
 
 class Student(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="student_profile",
+        limit_choices_to={"role": "student"},
+    )
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     code_massar = models.CharField(max_length=50, unique=True)
-    field = models.CharField(max_length=100)
+    classe = models.ForeignKey(
+        Classe,
+        on_delete=models.PROTECT,
+        related_name="students",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

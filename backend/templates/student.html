@@ -592,7 +592,7 @@
       tbody.innerHTML = records.map((r, i) => `
         <tr>
           <td style="color:var(--muted)">${i + 1}</td>
-          <td><strong>${esc(r.course_title || r.session?.course_title || '—')}</strong></td>
+          <td><strong>${esc(r.subject || '—')}</strong></td>
           <td style="color:var(--muted)">${formatDate(r.session_date || r.session?.date)}</td>
           <td style="color:var(--muted);font-size:.82rem">${formatDateTime(r.scanned_at || r.created_at)}</td>
           <td><span class="badge badge-present">Present</span></td>

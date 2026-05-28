@@ -83,6 +83,9 @@ window.I18N = {
   excelDownloaded: 'Fichier Excel téléchargé !',
   studentScanned: '{name} vient de scanner !',
   noCourses: 'Aucun cours assigné.',
+  noClasses: 'Aucune classe assignée.',
+  tabClasses: 'Classes',
+  tabSessions: 'Séances',
   sessions: 'Séances',
   noSessions: 'Aucune séance. Cliquez sur « + Nouvelle ».',
 };

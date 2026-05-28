@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
-from .models import Student, User
+from .models import Classe, Student, User
 
 
 class LoginSerializer(serializers.Serializer):
@@ -30,6 +30,12 @@ class LoginSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    assigned_class_ids = serializers.PrimaryKeyRelatedField(
+        source="assigned_classes",
+        many=True,
+        queryset=Classe.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = User
@@ -41,12 +47,20 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "role",
             "is_active",
+            "assigned_class_ids",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
 
     def get_full_name(self, obj):
-        return f"{obj.first_name} {obj.last_name}"
+        return obj.full_name
+
+    def validate_assigned_class_ids(self, value):
+        if self.instance and self.instance.role != "teacher" and value:
+            raise serializers.ValidationError(
+                "Seuls les enseignants peuvent être affectés à des classes."
+            )
+        return value
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -59,6 +73,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         allow_blank=True,
         style={"input_type": "password"},
     )
+    assigned_class_ids = serializers.PrimaryKeyRelatedField(
+        source="assigned_classes",
+        many=True,
+        queryset=Classe.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = User
@@ -69,6 +89,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "role",
             "password",
             "password_confirm",
+            "assigned_class_ids",
         ]
 
     def validate(self, data):
@@ -79,18 +100,114 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 {"password_confirm": "Passwords do not match."}
             )
         data.pop("password_confirm", None)
+        assigned = data.get("assigned_classes", [])
+        role = data.get("role", "teacher")
+        if role != "teacher" and assigned:
+            raise serializers.ValidationError(
+                {"assigned_class_ids": "Seuls les enseignants peuvent avoir des classes."}
+            )
         return data
 
     def create(self, validated_data):
+        assigned_classes = validated_data.pop("assigned_classes", [])
         password = validated_data.pop("password")
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        if assigned_classes:
+            user.assigned_classes.set(assigned_classes)
         return user
 
 
+class UserUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        required=False,
+        allow_blank=True,
+        style={"input_type": "password"},
+    )
+    assigned_class_ids = serializers.PrimaryKeyRelatedField(
+        source="assigned_classes",
+        many=True,
+        queryset=Classe.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "email",
+            "role",
+            "is_active",
+            "password",
+            "assigned_class_ids",
+        ]
+
+    def validate(self, data):
+        role = data.get("role", getattr(self.instance, "role", None))
+        assigned = data.get("assigned_classes")
+        if assigned is not None and role != "teacher" and assigned:
+            raise serializers.ValidationError(
+                {"assigned_class_ids": "Seuls les enseignants peuvent avoir des classes."}
+            )
+        return data
+
+    def update(self, instance, validated_data):
+        assigned_classes = validated_data.pop("assigned_classes", None)
+        password = validated_data.pop("password", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        if assigned_classes is not None:
+            instance.assigned_classes.set(assigned_classes)
+        return instance
+
+
+class ClasseSerializer(serializers.ModelSerializer):
+    student_count = serializers.SerializerMethodField()
+    teacher_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Classe
+        fields = [
+            "id",
+            "name",
+            "level",
+            "field",
+            "academic_year",
+            "student_count",
+            "teacher_count",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+    def get_student_count(self, obj):
+        return obj.students.count()
+
+    def get_teacher_count(self, obj):
+        return obj.teachers.count()
+
+
 class StudentSerializer(serializers.ModelSerializer):
+    classe_name = serializers.CharField(source="classe.name", read_only=True)
+    classe_field = serializers.CharField(source="classe.field", read_only=True)
+
     class Meta:
         model = Student
-        fields = ["id", "first_name", "last_name", "code_massar", "field", "created_at"]
+        fields = [
+            "id",
+            "user",
+            "first_name",
+            "last_name",
+            "code_massar",
+            "classe",
+            "classe_name",
+            "classe_field",
+            "created_at",
+        ]
         read_only_fields = ["id", "created_at"]

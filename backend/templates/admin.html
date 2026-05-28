@@ -27,7 +27,7 @@
 <main>
   <div class="page-header">
     <h1>Tableau de bord administrateur</h1>
-    <p>Gérez les utilisateurs, étudiants, cours et consultez les présences en direct.</p>
+    <p>Gérez les utilisateurs, classes, étudiants, séances et consultez les présences en direct.</p>
   </div>
 
   <!-- TABS -->
@@ -41,8 +41,11 @@
     <button class="tab-btn" data-tab="students">
       🎓 Étudiants <span class="tab-count" id="cntStudents">—</span>
     </button>
-    <button class="tab-btn" data-tab="courses">
-      📚 Cours <span class="tab-count" id="cntCourses">—</span>
+    <button class="tab-btn" data-tab="classes">
+      🏫 Classes <span class="tab-count" id="cntClasses">—</span>
+    </button>
+    <button class="tab-btn" data-tab="sessions">
+      📅 Séances <span class="tab-count" id="cntSessions">—</span>
     </button>
   </div>
 
@@ -65,8 +68,8 @@
 
     <div class="live-toolbar">
       <div class="filters">
-        <select id="filterCourse">
-          <option value="">Tous les cours</option>
+        <select id="filterClasse">
+          <option value="">Toutes les classes</option>
         </select>
         <select id="filterSession">
           <option value="">Toutes les séances</option>
@@ -85,7 +88,8 @@
             <th>#</th>
             <th>Étudiant</th>
             <th>Code Massar</th>
-            <th>Cours</th>
+            <th>Matière</th>
+            <th>Classe</th>
             <th>Enseignant</th>
             <th>Date séance</th>
             <th>Scanné à</th>
@@ -93,7 +97,7 @@
           </tr>
         </thead>
         <tbody id="attendanceBody">
-          <tr class="empty-row"><td colspan="8">Chargement des présences…</td></tr>
+          <tr class="empty-row"><td colspan="9">Chargement des présences…</td></tr>
         </tbody>
       </table>
     </div>
@@ -113,10 +117,12 @@
             <th>Nom</th>
             <th>E-mail</th>
             <th>Rôle</th>
+            <th>Statut</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="usersBody">
-          <tr class="empty-row"><td colspan="4">Chargement…</td></tr>
+          <tr class="empty-row"><td colspan="6">Chargement…</td></tr>
         </tbody>
       </table>
     </div>
@@ -133,36 +139,65 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Name</th>
+            <th>Nom</th>
             <th>Code Massar</th>
-            <th>Filière</th>
+            <th>Classe</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsBody">
-          <tr class="empty-row"><td colspan="4">Chargement…</td></tr>
+          <tr class="empty-row"><td colspan="5">Chargement…</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- COURSES PANEL -->
-  <div class="tab-panel" id="tab-courses">
+  <!-- CLASSES PANEL -->
+  <div class="tab-panel" id="tab-classes">
     <div class="section-head">
-      <h2>Tous les cours</h2>
-      <button class="btn" id="btnOpenAddCourse">+ Nouveau cours</button>
+      <h2>Toutes les classes</h2>
+      <button class="btn" id="btnOpenAddClasse">+ Nouvelle classe</button>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>#</th>
-            <th>Titre</th>
-            <th>Code</th>
-            <th>Enseignant</th>
+            <th>Nom</th>
+            <th>Niveau</th>
+            <th>Filière</th>
+            <th>Année</th>
+            <th>Étudiants</th>
+            <th>Actions</th>
           </tr>
         </thead>
-        <tbody id="coursesBody">
-          <tr class="empty-row"><td colspan="4">Chargement…</td></tr>
+        <tbody id="classesBody">
+          <tr class="empty-row"><td colspan="7">Chargement…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SESSIONS PANEL -->
+  <div class="tab-panel" id="tab-sessions">
+    <div class="section-head">
+      <h2>Toutes les séances</h2>
+      <button class="btn" id="btnOpenAddSession">+ Nouvelle séance</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Matière</th>
+            <th>Classe</th>
+            <th>Enseignant</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="sessionsBody">
+          <tr class="empty-row"><td colspan="6">Chargement…</td></tr>
         </tbody>
       </table>
     </div>
@@ -234,8 +269,8 @@
         <input type="text" id="sCode" placeholder="M123456" />
       </div>
       <div class="field">
-        <label>Field / Section</label>
-        <input type="text" id="sField" placeholder="Computer Science" />
+        <label>Classe</label>
+        <select id="sClasse"><option value="">— Chargement… —</option></select>
       </div>
     </div>
     <div class="modal-footer">
@@ -245,32 +280,84 @@
   </div>
 </div>
 
-<!-- ── MODAL: Add Course ── -->
-<div class="modal-backdrop" id="modalAddCourse">
+<!-- ── MODAL: Edit User ── -->
+<div class="modal-backdrop" id="modalEditUser">
   <div class="modal">
     <div class="modal-header">
-      <h3>Create New Course</h3>
-      <button class="modal-close" data-close="modalAddCourse">✕</button>
+      <h3>Modifier l'utilisateur</h3>
+      <button class="modal-close" data-close="modalEditUser">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field">
-        <label>Course Title</label>
-        <input type="text" id="cTitle" placeholder="Introduction to Algorithms" />
+      <input type="hidden" id="euId" />
+      <div class="field-row">
+        <div class="field"><label>Prénom</label><input type="text" id="euFirstName" /></div>
+        <div class="field"><label>Nom</label><input type="text" id="euLastName" /></div>
       </div>
+      <div class="field"><label>E-mail</label><input type="email" id="euEmail" /></div>
       <div class="field">
-        <label>Course Code</label>
-        <input type="text" id="cCode" placeholder="CS101" />
-      </div>
-      <div class="field">
-        <label>Assign Teacher</label>
-        <select id="cTeacher">
-          <option value="">— Loading teachers… —</option>
+        <label>Rôle</label>
+        <select id="euRole">
+          <option value="teacher">Enseignant</option>
+          <option value="admin">Admin</option>
+          <option value="student">Étudiant</option>
         </select>
       </div>
+      <div class="field" id="euClassesWrap">
+        <label>Classes assignées (enseignant)</label>
+        <select id="euClasses" multiple size="4"></select>
+      </div>
+      <div class="field"><label>Nouveau mot de passe (optionnel)</label><input type="password" id="euPassword" /></div>
     </div>
     <div class="modal-footer">
-      <button class="btn outline" data-close="modalAddCourse">Cancel</button>
-      <button class="btn" id="btnSubmitCourse">Create Course</button>
+      <button class="btn outline" data-close="modalEditUser">Annuler</button>
+      <button class="btn" id="btnSubmitEditUser">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Add/Edit Classe ── -->
+<div class="modal-backdrop" id="modalClasse">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalClasseTitle">Nouvelle classe</h3>
+      <button class="modal-close" data-close="modalClasse">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="clId" />
+      <div class="field"><label>Nom</label><input type="text" id="clName" placeholder="Groupe A" /></div>
+      <div class="field"><label>Niveau</label><input type="text" id="clLevel" placeholder="Licence 3" /></div>
+      <div class="field"><label>Filière</label><input type="text" id="clField" placeholder="Informatique" /></div>
+      <div class="field"><label>Année universitaire</label><input type="text" id="clYear" placeholder="2025-2026" /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" data-close="modalClasse">Annuler</button>
+      <button class="btn" id="btnSubmitClasse">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Add Session ── -->
+<div class="modal-backdrop" id="modalAddSession">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nouvelle séance</h3>
+      <button class="modal-close" data-close="modalAddSession">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Matière</label><input type="text" id="sessSubject" placeholder="Algorithmique" /></div>
+      <div class="field">
+        <label>Classe</label>
+        <select id="sessClasse"><option value="">— Chargement… —</option></select>
+      </div>
+      <div class="field">
+        <label>Enseignant</label>
+        <select id="sessTeacher"><option value="">— Chargement… —</option></select>
+      </div>
+      <div class="field"><label>Date</label><input type="date" id="sessDate" /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" data-close="modalAddSession">Annuler</button>
+      <button class="btn" id="btnSubmitSession">Créer la séance</button>
     </div>
   </div>
 </div>
@@ -299,14 +386,13 @@
   /* ── Data stores ── */
   let allUsers    = [];
   let allStudents = [];
-  let allCourses  = [];
-  let allTeachers = [];
+  let allClasses  = [];
   let allSessions = [];
   let allAttendance = [];
   let adminLiveWS = null;
 
   async function loadAll() {
-    await Promise.all([loadUsers(), loadStudents(), loadCourses(), loadSessions()]);
+    await Promise.all([loadUsers(), loadClasses(), loadStudents(), loadSessions()]);
     await loadAttendance();
     connectAdminLiveWS();
   }
@@ -324,10 +410,12 @@
     }
   }
 
+  const roleLabel = { admin: 'Admin', teacher: 'Enseignant', student: 'Étudiant' };
+
   function renderUsers() {
     const tbody = document.getElementById('usersBody');
     if (!allUsers.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No users found.</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Aucun utilisateur.</td></tr>';
       return;
     }
     tbody.innerHTML = allUsers.map((u, i) => `
@@ -335,9 +423,49 @@
         <td><span style="color:var(--muted)">${i + 1}</span></td>
         <td><strong>${esc(u.first_name)} ${esc(u.last_name)}</strong></td>
         <td style="color:var(--muted)">${esc(u.email)}</td>
-        <td><span class="badge badge-${u.role}">${u.role}</span></td>
+        <td><span class="badge badge-${u.role}">${roleLabel[u.role] || u.role}</span></td>
+        <td><span class="badge ${u.is_active ? 'badge-present' : 'badge-absent'}">${u.is_active ? 'Actif' : 'Inactif'}</span></td>
+        <td class="actions-cell">
+          <button class="btn sm outline" onclick="openEditUser(${u.id})">Modifier</button>
+          <button class="btn sm outline" onclick="toggleUserActive(${u.id})">${u.is_active ? 'Désactiver' : 'Activer'}</button>
+          <button class="btn sm outline" style="color:var(--red)" onclick="deleteUser(${u.id})">Supprimer</button>
+        </td>
       </tr>
     `).join('');
+  }
+
+  async function openEditUser(id) {
+    const u = allUsers.find(x => x.id === id);
+    if (!u) return;
+    document.getElementById('euId').value = u.id;
+    document.getElementById('euFirstName').value = u.first_name;
+    document.getElementById('euLastName').value = u.last_name;
+    document.getElementById('euEmail').value = u.email;
+    document.getElementById('euRole').value = u.role;
+    document.getElementById('euPassword').value = '';
+    const sel = document.getElementById('euClasses');
+    sel.innerHTML = allClasses.map(c => `<option value="${c.id}">${esc(c.name)} — ${esc(c.field)}</option>`).join('');
+    const assigned = u.assigned_class_ids || [];
+    Array.from(sel.options).forEach(o => { o.selected = assigned.includes(Number(o.value)) || assigned.includes(o.value); });
+    document.getElementById('euClassesWrap').style.display = u.role === 'teacher' ? 'block' : 'none';
+    openModal('modalEditUser');
+  }
+
+  async function toggleUserActive(id) {
+    try {
+      await API.apiFetch(`/users/${id}/toggle-active/`, { method: 'POST' });
+      showToast('Statut mis à jour.', 'success');
+      await loadUsers();
+    } catch (e) { showToast(e.message, 'error'); }
+  }
+
+  async function deleteUser(id) {
+    if (!confirm('Supprimer cet utilisateur ?')) return;
+    try {
+      await API.apiFetch(`/users/${id}/`, { method: 'DELETE' });
+      showToast('Utilisateur supprimé.', 'success');
+      await loadUsers();
+    } catch (e) { showToast(e.message, 'error'); }
   }
 
   /* ── Load Students ── */
@@ -356,7 +484,7 @@
   function renderStudents() {
     const tbody = document.getElementById('studentsBody');
     if (!allStudents.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No students found.</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Aucun étudiant.</td></tr>';
       return;
     }
     tbody.innerHTML = allStudents.map((s, i) => `
@@ -364,44 +492,111 @@
         <td><span style="color:var(--muted)">${i + 1}</span></td>
         <td><strong>${esc(s.first_name)} ${esc(s.last_name)}</strong></td>
         <td style="font-family:monospace;color:var(--accent)">${esc(s.code_massar)}</td>
-        <td style="color:var(--muted)">${esc(s.field || '—')}</td>
+        <td style="color:var(--muted)">${esc(s.classe_name || '—')}</td>
+        <td><button class="btn sm outline" style="color:var(--red)" onclick="deleteStudent(${s.id})">Supprimer</button></td>
       </tr>
     `).join('');
   }
 
-  /* ── Load Courses ── */
-  async function loadCourses() {
+  async function deleteStudent(id) {
+    if (!confirm('Supprimer cet étudiant ?')) return;
     try {
-      const data = await API.apiFetch('/courses/');
-      allCourses = Array.isArray(data) ? data : (data.results || []);
-      renderCourses();
-      document.getElementById('cntCourses').textContent = allCourses.length;
+      await API.apiFetch(`/students/${id}/`, { method: 'DELETE' });
+      showToast('Étudiant supprimé.', 'success');
+      await loadStudents();
+    } catch (e) { showToast(e.message, 'error'); }
+  }
+
+  async function loadClasses() {
+    try {
+      const data = await API.apiFetch('/classes/');
+      allClasses = Array.isArray(data) ? data : (data.results || []);
+      renderClasses();
+      document.getElementById('cntClasses').textContent = allClasses.length;
+      populateClasseSelects();
     } catch (e) {
-      document.getElementById('coursesBody').innerHTML =
-        `<tr class="empty-row"><td colspan="4">Failed to load courses: ${e.message}</td></tr>`;
+      document.getElementById('classesBody').innerHTML =
+        `<tr class="empty-row"><td colspan="7">Erreur: ${esc(e.message)}</td></tr>`;
     }
   }
 
-  function renderCourses() {
-    const tbody = document.getElementById('coursesBody');
-    if (!allCourses.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No courses found.</td></tr>';
+  function renderClasses() {
+    const tbody = document.getElementById('classesBody');
+    if (!allClasses.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Aucune classe.</td></tr>';
       return;
     }
-    tbody.innerHTML = allCourses.map((c, i) => `
+    tbody.innerHTML = allClasses.map((c, i) => `
       <tr>
         <td><span style="color:var(--muted)">${i + 1}</span></td>
-        <td><strong>${esc(c.title)}</strong></td>
-        <td style="font-family:monospace;color:var(--yellow)">${esc(c.code)}</td>
-        <td style="color:var(--muted)">${esc(teacherName(c.teacher))}</td>
+        <td><strong>${esc(c.name)}</strong></td>
+        <td>${esc(c.level)}</td>
+        <td>${esc(c.field)}</td>
+        <td>${esc(c.academic_year)}</td>
+        <td>${c.student_count ?? '—'}</td>
+        <td>
+          <button class="btn sm outline" onclick="openEditClasse(${c.id})">Modifier</button>
+          <button class="btn sm outline" style="color:var(--red)" onclick="deleteClasse(${c.id})">Supprimer</button>
+        </td>
       </tr>
     `).join('');
+  }
+
+  function populateClasseSelects() {
+    ['sClasse', 'sessClasse'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const val = sel.value;
+      sel.innerHTML = '<option value="">— Sélectionner —</option>' +
+        allClasses.map(c => `<option value="${c.id}">${esc(c.name)} (${esc(c.field)})</option>`).join('');
+      sel.value = val;
+    });
+  }
+
+  async function loadSessionsList() {
+    try {
+      const data = await API.apiFetch('/sessions/');
+      allSessions = Array.isArray(data) ? data : (data.results || []);
+      renderSessionsList();
+      document.getElementById('cntSessions').textContent = allSessions.length;
+      populateAttendanceFilters();
+    } catch (e) {
+      document.getElementById('sessionsBody').innerHTML =
+        `<tr class="empty-row"><td colspan="6">Erreur: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderSessionsList() {
+    const tbody = document.getElementById('sessionsBody');
+    if (!allSessions.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Aucune séance.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allSessions.map((s, i) => `
+      <tr>
+        <td><span style="color:var(--muted)">${i + 1}</span></td>
+        <td><strong>${esc(s.subject)}</strong></td>
+        <td>${esc(s.classe_name || '—')}</td>
+        <td>${esc(s.teacher_name || teacherName(s.teacher))}</td>
+        <td>${API.formatDate(s.date)}</td>
+        <td><button class="btn sm outline" style="color:var(--red)" onclick="deleteSession(${s.id})">Supprimer</button></td>
+      </tr>
+    `).join('');
+  }
+
+  async function deleteSession(id) {
+    if (!confirm('Supprimer cette séance ?')) return;
+    try {
+      await API.apiFetch(`/sessions/${id}/`, { method: 'DELETE' });
+      showToast('Séance supprimée.', 'success');
+      await loadSessionsList();
+    } catch (e) { showToast(e.message, 'error'); }
   }
 
   function teacherName(teacherId) {
     const t = allUsers.find(u => u.id === teacherId || u.id === Number(teacherId));
     if (t) return `${t.first_name} ${t.last_name}`;
-    return teacherId || '—';
+    return '—';
   }
 
   /* ── Tabs ── */
@@ -416,21 +611,15 @@
 
   /* ── Live Attendance ── */
   async function loadSessions() {
-    try {
-      const data = await API.apiFetch('/sessions/');
-      allSessions = Array.isArray(data) ? data : (data.results || []);
-      populateAttendanceFilters();
-    } catch {
-      allSessions = [];
-    }
+    await loadSessionsList();
   }
 
   async function loadAttendance() {
-    const courseId = document.getElementById('filterCourse')?.value || '';
+    const classeId = document.getElementById('filterClasse')?.value || '';
     const sessionId = document.getElementById('filterSession')?.value || '';
     let path = '/attendance/';
     const params = new URLSearchParams();
-    if (courseId) params.set('course', courseId);
+    if (classeId) params.set('classe', classeId);
     if (sessionId) params.set('session', sessionId);
     if (params.toString()) path += `?${params}`;
 
@@ -442,34 +631,34 @@
       document.getElementById('cntAttendance').textContent = allAttendance.length;
     } catch (e) {
       document.getElementById('attendanceBody').innerHTML =
-        `<tr class="empty-row"><td colspan="8">Failed to load: ${API.esc(e.message)}</td></tr>`;
+        `<tr class="empty-row"><td colspan="9">Échec du chargement: ${API.esc(e.message)}</td></tr>`;
     }
   }
 
   function populateAttendanceFilters() {
-    const courseSel = document.getElementById('filterCourse');
+    const classeSel = document.getElementById('filterClasse');
     const sessionSel = document.getElementById('filterSession');
-    if (!courseSel || !sessionSel) return;
+    if (!classeSel || !sessionSel) return;
 
-    const courseVal = courseSel.value;
-    courseSel.innerHTML = '<option value="">All courses</option>';
-    allCourses.forEach(c => {
+    const classeVal = classeSel.value;
+    classeSel.innerHTML = '<option value="">Toutes les classes</option>';
+    allClasses.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
-      opt.textContent = `${c.code} — ${c.title}`;
-      courseSel.appendChild(opt);
+      opt.textContent = `${c.name} — ${c.field}`;
+      classeSel.appendChild(opt);
     });
-    courseSel.value = courseVal;
+    classeSel.value = classeVal;
 
     const sessionVal = sessionSel.value;
-    sessionSel.innerHTML = '<option value="">All sessions</option>';
-    const filtered = courseVal
-      ? allSessions.filter(s => String(s.course) === String(courseVal))
+    sessionSel.innerHTML = '<option value="">Toutes les séances</option>';
+    const filtered = classeVal
+      ? allSessions.filter(s => String(s.classe) === String(classeVal))
       : allSessions;
     filtered.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.id;
-      opt.textContent = `${s.course_code || ''} · ${API.formatDate(s.date)}`;
+      opt.textContent = `${s.subject || ''} · ${API.formatDate(s.date)}`;
       sessionSel.appendChild(opt);
     });
     sessionSel.value = sessionVal;
@@ -481,17 +670,17 @@
       const d = new Date(r.validation_time);
       return !Number.isNaN(d.getTime()) && d.toDateString() === today;
     }).length;
-    const courseSet = new Set(allAttendance.map(r => r.course_code).filter(Boolean));
+    const subjectSet = new Set(allAttendance.map(r => r.subject).filter(Boolean));
 
     document.getElementById('statTotal').textContent = allAttendance.length;
     document.getElementById('statToday').textContent = todayCount;
-    document.getElementById('statActiveCourses').textContent = courseSet.size;
+    document.getElementById('statActiveCourses').textContent = subjectSet.size;
   }
 
   function renderAttendanceTable() {
     const tbody = document.getElementById('attendanceBody');
     if (!allAttendance.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No attendance recorded yet.</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Aucune présence enregistrée.</td></tr>';
       return;
     }
     tbody.innerHTML = allAttendance.map((r, i) => attendanceRowHtml(r, i + 1)).join('');
@@ -503,7 +692,8 @@
         <td style="color:var(--muted)">${idx}</td>
         <td><strong>${API.esc(r.student_name)}</strong></td>
         <td style="font-family:monospace;color:var(--accent)">${API.esc(r.student_code_massar)}</td>
-        <td>${API.esc(r.course_title)} <span style="color:var(--muted);font-size:.78rem">(${API.esc(r.course_code)})</span></td>
+        <td>${API.esc(r.subject || '—')}</td>
+        <td style="color:var(--muted)">${API.esc(r.classe_session || r.classe_name || '—')}</td>
         <td style="color:var(--muted)">${API.esc(r.teacher_name || '—')}</td>
         <td style="color:var(--muted)">${API.formatDate(r.session_date)}</td>
         <td style="color:var(--muted);font-size:.8rem">${API.formatDateTime(r.validation_time)}</td>
@@ -513,13 +703,13 @@
   }
 
   function prependAttendanceRecord(record) {
-    const courseId = document.getElementById('filterCourse')?.value;
+    const classeId = document.getElementById('filterClasse')?.value;
     const sessionId = document.getElementById('filterSession')?.value;
 
     if (sessionId && String(record.session) !== String(sessionId)) return;
-    if (courseId) {
-      const course = allCourses.find(c => String(c.id) === String(courseId));
-      if (course && record.course_code !== course.code) return;
+    if (classeId) {
+      const cls = allClasses.find(c => String(c.id) === String(classeId));
+      if (cls && record.classe_session !== cls.name && record.classe_name !== cls.name) return;
     }
 
     if (allAttendance.some(r => r.id === record.id)) return;
@@ -538,7 +728,8 @@
         <td style="color:var(--muted)">1</td>
         <td><strong>${API.esc(record.student_name)}</strong></td>
         <td style="font-family:monospace;color:var(--accent)">${API.esc(record.student_code_massar)}</td>
-        <td>${API.esc(record.course_title)} <span style="color:var(--muted);font-size:.78rem">(${API.esc(record.course_code)})</span></td>
+        <td>${API.esc(record.subject || '—')}</td>
+        <td style="color:var(--muted)">${API.esc(record.classe_session || record.classe_name || '—')}</td>
         <td style="color:var(--muted)">${API.esc(record.teacher_name || '—')}</td>
         <td style="color:var(--muted)">${API.formatDate(record.session_date)}</td>
         <td style="color:var(--muted);font-size:.8rem">${API.formatDateTime(record.validation_time)}</td>
@@ -551,7 +742,7 @@
       if (cell) cell.textContent = i + 1;
     });
 
-    showToast(t('markedPresent', { name: record.student_name, course: record.course_code }), 'success');
+    showToast(t('markedPresent', { name: record.student_name, course: record.subject || '' }), 'success');
   }
 
   function connectAdminLiveWS() {
@@ -576,7 +767,7 @@
     );
   }
 
-  document.getElementById('filterCourse')?.addEventListener('change', () => {
+  document.getElementById('filterClasse')?.addEventListener('change', () => {
     populateAttendanceFilters();
     loadAttendance();
   });
@@ -628,68 +819,140 @@
   });
 
   /* ── Add Student ── */
-  document.getElementById('btnOpenAddStudent').addEventListener('click', () => openModal('modalAddStudent'));
-
   document.getElementById('btnSubmitStudent').addEventListener('click', async () => {
     const body = {
       first_name:  document.getElementById('sFirstName').value.trim(),
       last_name:   document.getElementById('sLastName').value.trim(),
       code_massar: document.getElementById('sCode').value.trim(),
-      field:       document.getElementById('sField').value.trim(),
+      classe:      document.getElementById('sClasse').value,
     };
 
-    if (!body.first_name || !body.last_name || !body.code_massar) {
-      showToast('First name, last name and code massar are required.', 'error'); return;
+    if (!body.first_name || !body.last_name || !body.code_massar || !body.classe) {
+      showToast('Tous les champs sont obligatoires (y compris la classe).', 'error'); return;
     }
 
     try {
       await API.apiFetch('/students/', { method: 'POST', body: JSON.stringify(body) });
       closeModal('modalAddStudent');
-      showToast('Student added successfully!', 'success');
-      ['sFirstName','sLastName','sCode','sField'].forEach(id => document.getElementById(id).value = '');
+      showToast('Étudiant ajouté !', 'success');
+      ['sFirstName','sLastName','sCode'].forEach(id => document.getElementById(id).value = '');
       await loadStudents();
     } catch (e) {
       showToast(`Error: ${e.message}`, 'error');
     }
   });
 
-  /* ── Add Course ── */
-  document.getElementById('btnOpenAddCourse').addEventListener('click', async () => {
-    // Populate teachers dropdown
-    const teacherSel = document.getElementById('cTeacher');
-    teacherSel.innerHTML = '<option value="">— Select Teacher —</option>';
-    const teachers = allUsers.filter(u => u.role === 'teacher');
-    allTeachers = teachers;
-    teachers.forEach(t => {
+  document.getElementById('euRole')?.addEventListener('change', (e) => {
+    document.getElementById('euClassesWrap').style.display = e.target.value === 'teacher' ? 'block' : 'none';
+  });
+
+  document.getElementById('btnSubmitEditUser').addEventListener('click', async () => {
+    const id = document.getElementById('euId').value;
+    const body = {
+      first_name: document.getElementById('euFirstName').value.trim(),
+      last_name: document.getElementById('euLastName').value.trim(),
+      email: document.getElementById('euEmail').value.trim(),
+      role: document.getElementById('euRole').value,
+    };
+    const pwd = document.getElementById('euPassword').value;
+    if (pwd) body.password = pwd;
+    if (body.role === 'teacher') {
+      body.assigned_class_ids = Array.from(document.getElementById('euClasses').selectedOptions).map(o => Number(o.value));
+    }
+    try {
+      await API.apiFetch(`/users/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });
+      closeModal('modalEditUser');
+      showToast('Utilisateur mis à jour.', 'success');
+      await loadUsers();
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+
+  document.getElementById('btnOpenAddClasse').addEventListener('click', () => {
+    document.getElementById('clId').value = '';
+    document.getElementById('modalClasseTitle').textContent = 'Nouvelle classe';
+    ['clName','clLevel','clField','clYear'].forEach(id => document.getElementById(id).value = '');
+    openModal('modalClasse');
+  });
+
+  function openEditClasse(id) {
+    const c = allClasses.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('clId').value = c.id;
+    document.getElementById('modalClasseTitle').textContent = 'Modifier la classe';
+    document.getElementById('clName').value = c.name;
+    document.getElementById('clLevel').value = c.level;
+    document.getElementById('clField').value = c.field;
+    document.getElementById('clYear').value = c.academic_year;
+    openModal('modalClasse');
+  }
+
+  document.getElementById('btnSubmitClasse').addEventListener('click', async () => {
+    const id = document.getElementById('clId').value;
+    const body = {
+      name: document.getElementById('clName').value.trim(),
+      level: document.getElementById('clLevel').value.trim(),
+      field: document.getElementById('clField').value.trim(),
+      academic_year: document.getElementById('clYear').value.trim(),
+    };
+    if (!body.name || !body.level || !body.field || !body.academic_year) {
+      showToast('Tous les champs sont obligatoires.', 'error'); return;
+    }
+    try {
+      if (id) {
+        await API.apiFetch(`/classes/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });
+      } else {
+        await API.apiFetch('/classes/', { method: 'POST', body: JSON.stringify(body) });
+      }
+      closeModal('modalClasse');
+      showToast('Classe enregistrée.', 'success');
+      await loadClasses();
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+
+  async function deleteClasse(id) {
+    if (!confirm('Supprimer cette classe ?')) return;
+    try {
+      await API.apiFetch(`/classes/${id}/`, { method: 'DELETE' });
+      showToast('Classe supprimée.', 'success');
+      await loadClasses();
+    } catch (e) { showToast(e.message, 'error'); }
+  }
+
+  document.getElementById('btnOpenAddSession').addEventListener('click', () => {
+    const teacherSel = document.getElementById('sessTeacher');
+    teacherSel.innerHTML = '<option value="">— Sélectionner —</option>';
+    allUsers.filter(u => u.role === 'teacher').forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
       opt.textContent = `${t.first_name} ${t.last_name}`;
       teacherSel.appendChild(opt);
     });
-    openModal('modalAddCourse');
+    document.getElementById('sessDate').value = new Date().toISOString().split('T')[0];
+    populateClasseSelects();
+    openModal('modalAddSession');
   });
 
-  document.getElementById('btnSubmitCourse').addEventListener('click', async () => {
+  document.getElementById('btnSubmitSession').addEventListener('click', async () => {
     const body = {
-      title:   document.getElementById('cTitle').value.trim(),
-      code:    document.getElementById('cCode').value.trim(),
-      teacher: document.getElementById('cTeacher').value,
+      subject: document.getElementById('sessSubject').value.trim(),
+      classe: document.getElementById('sessClasse').value,
+      teacher: document.getElementById('sessTeacher').value,
+      date: document.getElementById('sessDate').value,
     };
-
-    if (!body.title || !body.code || !body.teacher) {
-      showToast('All course fields are required.', 'error'); return;
+    if (!body.subject || !body.classe || !body.teacher || !body.date) {
+      showToast('Tous les champs sont obligatoires.', 'error'); return;
     }
-
     try {
-      await API.apiFetch('/courses/', { method: 'POST', body: JSON.stringify(body) });
-      closeModal('modalAddCourse');
-      showToast('Course created successfully!', 'success');
-      ['cTitle','cCode'].forEach(id => document.getElementById(id).value = '');
-      await loadCourses();
-      populateAttendanceFilters();
-    } catch (e) {
-      showToast(`Error: ${e.message}`, 'error');
-    }
+      await API.apiFetch('/sessions/', { method: 'POST', body: JSON.stringify(body) });
+      closeModal('modalAddSession');
+      showToast('Séance créée.', 'success');
+      await loadSessionsList();
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+
+  document.getElementById('btnOpenAddStudent').addEventListener('click', () => {
+    populateClasseSelects();
+    openModal('modalAddStudent');
   });
 
   /* ── Toast ── */

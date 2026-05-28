@@ -708,10 +708,10 @@
             <!-- SIDEBAR: Courses + Sessions -->
             <aside class="sidebar">
                 <div class="sidebar-header">
-                    <h2>📚 Mes cours</h2>
+                    <h2>🏫 Mes classes</h2>
                     <button class="btn sm outline" type="button" onclick="showLiveDashboard()">📡 En direct</button>
                 </div>
-                <div class="sidebar-content" id="coursesContainer">
+                <div class="sidebar-content" id="classesContainer">
                     <div
                         style="
                             padding: 2rem 1.2rem;
@@ -720,7 +720,7 @@
                             font-size: 0.88rem;
                         "
                     >
-                        Chargement des cours…
+                        Chargement des classes…
                     </div>
                 </div>
             </aside>
@@ -742,14 +742,18 @@
         <div class="modal-backdrop" id="modalNewSession">
             <div class="modal">
                 <div class="modal-header">
-                    <h3>📅 Create New Session</h3>
+                    <h3>📅 Nouvelle séance</h3>
                     <button class="modal-close" data-close="modalNewSession">
                         ✕
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="field">
-                        <label>Session Date</label>
+                        <label>Matière</label>
+                        <input type="text" id="newSessionSubject" placeholder="Algorithmique" />
+                    </div>
+                    <div class="field">
+                        <label>Date de la séance</label>
                         <input type="date" id="newSessionDate" />
                     </div>
                 </div>
@@ -843,9 +847,9 @@
    STATE
 ═══════════════════════════════════════════════════════════ */
             let currentUser = null;
-            let allCourses = [];
-            let sessionsByCourse = {}; // courseId → [sessions]
-            let activeCourseId = null;
+            let allClasses = [];
+            let sessionsByClasse = {};
+            let activeClasseId = null;
             let activeSessionId = null;
             let qrExpiresAt = null;
             let qrCountdownTimer = null;
@@ -870,7 +874,7 @@
                     return;
                 }
 
-                await loadCourses();
+                await loadClasses();
                 await loadLiveAttendance();
                 showLiveDashboard();
                 connectTeacherLiveWS();
@@ -879,39 +883,39 @@
             /* ═══════════════════════════════════════════════════════════
    COURSES
 ═══════════════════════════════════════════════════════════ */
-            async function loadCourses() {
-                const container = document.getElementById("coursesContainer");
+            async function loadClasses() {
+                const container = document.getElementById("classesContainer");
                 try {
-                    const data = await API.apiFetch("/courses/");
-                    allCourses = Array.isArray(data)
+                    const data = await API.apiFetch("/classes/");
+                    allClasses = Array.isArray(data)
                         ? data
                         : data.results || [];
 
-                    if (!allCourses.length) {
+                    if (!allClasses.length) {
                         container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--muted);font-size:.88rem;">
-        No courses assigned yet.
+        ${t('noClasses')}
       </div>`;
                         return;
                     }
 
-                    container.innerHTML = allCourses
+                    container.innerHTML = allClasses
                         .map(
                             (c) => `
-      <div class="course-item" id="course-item-${c.id}">
-        <div class="course-header" data-course-id="${c.id}">
+      <div class="course-item" id="classe-item-${c.id}">
+        <div class="course-header" data-classe-id="${c.id}">
           <div class="course-info">
-            <div class="course-title">${esc(c.title)}</div>
-            <div class="course-code">${esc(c.code)}</div>
+            <div class="course-title">${esc(c.name)}</div>
+            <div class="course-code">${esc(c.field)} · ${esc(c.level)}</div>
           </div>
           <span class="chevron">›</span>
         </div>
         <div class="sessions-list" id="sessions-${c.id}">
           <div class="sessions-list-header">
-            <span>Sessions</span>
-            <button class="btn sm" onclick="openNewSessionModal(${c.id})">+ New</button>
+            <span>${t('sessions')}</span>
+            <button class="btn sm" onclick="openNewSessionModal(${c.id})">+ ${t('newSession')}</button>
           </div>
           <div id="session-items-${c.id}">
-            <div class="session-item" style="justify-content:center;color:var(--muted);font-size:.82rem;">Loading…</div>
+            <div class="session-item" style="justify-content:center;color:var(--muted);font-size:.82rem;">${t('loading')}</div>
           </div>
         </div>
       </div>
@@ -919,29 +923,27 @@
                         )
                         .join("");
 
-                    // Attach toggle handlers
                     document
                         .querySelectorAll(".course-header")
                         .forEach((hdr) => {
                             hdr.addEventListener("click", () =>
-                                toggleCourse(Number(hdr.dataset.courseId)),
+                                toggleClasse(Number(hdr.dataset.classeId)),
                             );
                         });
                 } catch (e) {
                     container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--red);font-size:.88rem;">
-      Failed to load courses: ${e.message}
+      ${t('failedLoad')}: ${e.message}
     </div>`;
                 }
             }
 
-            function toggleCourse(courseId) {
+            function toggleClasse(classeId) {
                 const hdr = document.querySelector(
-                    `.course-header[data-course-id="${courseId}"]`,
+                    `.course-header[data-classe-id="${classeId}"]`,
                 );
-                const list = document.getElementById(`sessions-${courseId}`);
+                const list = document.getElementById(`sessions-${classeId}`);
                 const isOpen = list.classList.contains("open");
 
-                // Collapse all
                 document
                     .querySelectorAll(".sessions-list")
                     .forEach((l) => l.classList.remove("open"));
@@ -952,28 +954,28 @@
                 if (!isOpen) {
                     hdr.classList.add("active");
                     list.classList.add("open");
-                    activeCourseId = courseId;
-                    loadSessions(courseId);
+                    activeClasseId = classeId;
+                    loadSessions(classeId);
                 } else {
-                    activeCourseId = null;
+                    activeClasseId = null;
                 }
             }
 
             /* ═══════════════════════════════════════════════════════════
    SESSIONS
 ═══════════════════════════════════════════════════════════ */
-            async function loadSessions(courseId) {
+            async function loadSessions(classeId) {
                 const container = document.getElementById(
-                    `session-items-${courseId}`,
+                    `session-items-${classeId}`,
                 );
                 try {
                     const data = await API.apiFetch(
-                        `/sessions/?course=${courseId}`,
+                        `/sessions/?classe=${classeId}`,
                     );
                     const sessions = Array.isArray(data)
                         ? data
                         : data.results || [];
-                    sessionsByCourse[courseId] = sessions;
+                    sessionsByClasse[classeId] = sessions;
 
                     if (!sessions.length) {
                         container.innerHTML = `<div class="session-item" style="justify-content:center;color:var(--muted);font-size:.82rem;">
@@ -982,30 +984,28 @@
                         return;
                     }
 
-                    const course = allCourses.find((c) => c.id === courseId);
                     container.innerHTML = sessions
                         .map(
                             (s) => `
       <div class="session-item ${activeSessionId === s.id ? "selected" : ""}"
            id="session-item-${s.id}"
            data-session-id="${s.id}"
-           data-course-id="${courseId}">
+           data-classe-id="${classeId}">
         <div>
           <div class="session-date">📅 ${formatDate(s.date)}</div>
-          <div class="session-id">ID #${s.id}</div>
+          <div class="session-id">${esc(s.subject)}</div>
         </div>
       </div>
     `,
                         )
                         .join("");
 
-                    // Attach click handlers
                     container
                         .querySelectorAll(".session-item")
                         .forEach((item) => {
                             item.addEventListener("click", () => {
                                 const sid = Number(item.dataset.sessionId);
-                                const cid = Number(item.dataset.courseId);
+                                const cid = Number(item.dataset.classeId);
                                 selectSession(sid, cid);
                             });
                         });
@@ -1019,13 +1019,13 @@
             /* ═══════════════════════════════════════════════════════════
    NEW SESSION MODAL
 ═══════════════════════════════════════════════════════════ */
-            let newSessionTargetCourseId = null;
+            let newSessionTargetClasseId = null;
 
-            function openNewSessionModal(courseId) {
-                newSessionTargetCourseId = courseId;
-                // Set today's date as default
+            function openNewSessionModal(classeId) {
+                newSessionTargetClasseId = classeId;
                 const today = new Date().toISOString().split("T")[0];
                 document.getElementById("newSessionDate").value = today;
+                document.getElementById("newSessionSubject").value = "";
                 openModal("modalNewSession");
             }
 
@@ -1034,8 +1034,10 @@
                 .addEventListener("click", async () => {
                     const date =
                         document.getElementById("newSessionDate").value;
-                    if (!date) {
-                        showToast("Please pick a date.", "error");
+                    const subject =
+                        document.getElementById("newSessionSubject").value.trim();
+                    if (!date || !subject) {
+                        showToast("Matière et date obligatoires.", "error");
                         return;
                     }
 
@@ -1043,14 +1045,15 @@
                         const session = await API.apiFetch("/sessions/", {
                             method: "POST",
                             body: JSON.stringify({
-                                course: newSessionTargetCourseId,
+                                classe: newSessionTargetClasseId,
+                                subject,
                                 date,
                             }),
                         });
                         closeModal("modalNewSession");
-                        showToast("Session created!", "success");
-                        await loadSessions(newSessionTargetCourseId);
-                        selectSession(session.id, newSessionTargetCourseId);
+                        showToast("Séance créée !", "success");
+                        await loadSessions(newSessionTargetClasseId);
+                        selectSession(session.id, newSessionTargetClasseId);
                     } catch (e) {
                         showToast(`Error: ${e.message}`, "error");
                     }
@@ -1106,7 +1109,7 @@
             <th>#</th>
             <th>Student</th>
             <th>Code Massar</th>
-            <th>Course</th>
+            <th>Matière</th>
             <th>Session Date</th>
             <th>Scanned At</th>
             <th>Status</th>
@@ -1149,7 +1152,7 @@
       <td style="color:var(--muted)">${idx}</td>
       <td><strong>${esc(r.student_name)}</strong></td>
       <td style="font-family:monospace;color:var(--accent)">${esc(r.student_code_massar)}</td>
-      <td>${esc(r.course_title)} <span style="color:var(--muted);font-size:.78rem">(${esc(r.course_code)})</span></td>
+      <td>${esc(r.subject || '—')} <span style="color:var(--muted);font-size:.78rem">(${esc(r.classe_session || r.classe_name || '')})</span></td>
       <td style="color:var(--muted)">${formatDate(r.session_date)}</td>
       <td style="color:var(--muted);font-size:.8rem">${formatDateTime(r.validation_time)}</td>
       <td><span class="badge badge-present">Present</span></td>
@@ -1171,7 +1174,7 @@
       <td style="color:var(--muted)">1</td>
       <td><strong>${esc(record.student_name)}</strong></td>
       <td style="font-family:monospace;color:var(--accent)">${esc(record.student_code_massar)}</td>
-      <td>${esc(record.course_title)} <span style="color:var(--muted);font-size:.78rem">(${esc(record.course_code)})</span></td>
+      <td>${esc(record.subject || '—')} <span style="color:var(--muted);font-size:.78rem">(${esc(record.classe_session || '')})</span></td>
       <td style="color:var(--muted)">${formatDate(record.session_date)}</td>
       <td style="color:var(--muted);font-size:.8rem">${formatDateTime(record.validation_time)}</td>
       <td><span class="badge badge-present">Present</span></td>
@@ -1226,7 +1229,7 @@
             /* ═══════════════════════════════════════════════════════════
    SELECT SESSION — renders the main panel
 ═══════════════════════════════════════════════════════════ */
-            function selectSession(sessionId, courseId) {
+            function selectSession(sessionId, classeId) {
                 // Disconnect previous session WS only
                 if (activeWS) {
                     activeWS.close();
@@ -1234,31 +1237,30 @@
                 }
 
                 activeSessionId = sessionId;
-                activeCourseId = courseId;
+                activeClasseId = classeId;
 
-                // Highlight selected
                 document
                     .querySelectorAll(".session-item")
                     .forEach((el) => el.classList.remove("selected"));
                 const el = document.getElementById(`session-item-${sessionId}`);
                 if (el) el.classList.add("selected");
 
-                const course = allCourses.find((c) => c.id === courseId);
-                const sessions = sessionsByCourse[courseId] || [];
+                const classe = allClasses.find((c) => c.id === classeId);
+                const sessions = sessionsByClasse[classeId] || [];
                 const session = sessions.find((s) => s.id === sessionId);
 
-                renderSessionPanel(session, course);
+                renderSessionPanel(session, classe);
                 loadAttendance(sessionId);
                 connectWS(sessionId);
             }
 
-            function renderSessionPanel(session, course) {
+            function renderSessionPanel(session, classe) {
                 const mainPanel = document.getElementById("mainPanel");
                 mainPanel.innerHTML = `
     <div class="session-detail-header">
       <div class="session-detail-title">
-        <h1>${esc(course?.title || "Session")}</h1>
-        <p>📅 ${formatDate(session?.date)} &nbsp;·&nbsp; Session #${session?.id}</p>
+        <h1>${esc(session?.subject || "Séance")}</h1>
+        <p>🏫 ${esc(classe?.name || '')} &nbsp;·&nbsp; 📅 ${formatDate(session?.date)}</p>
       </div>
       <div class="action-row">
         <button class="btn green" id="btnGenQR">🔲 Générer le QR</button>
@@ -1515,7 +1517,7 @@
       <td style="color:var(--muted)">${i + 1}</td>
       <td><strong>${esc(r.student_name || "—")}</strong></td>
       <td style="font-family:monospace;color:var(--accent)">${esc(r.student_code_massar || "—")}</td>
-      <td style="color:var(--muted)">${esc(r.student_field || "—")}</td>
+      <td style="color:var(--muted)">${esc(r.classe_name || "—")}</td>
       <td style="color:var(--muted);font-size:.8rem">${formatDateTime(r.validation_time)}</td>
       <td><span class="badge badge-present">Present</span></td>
     </tr>
