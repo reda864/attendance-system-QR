@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 class AppConstants {
   // ─── API Base URL ─────────────────────────────────────────────────────────
+  // Production (Render, Railway, etc.) — set this when the API is not on your PC:
+  //   flutter run --dart-define=API_BASE_URL=https://YOUR-SERVICE.onrender.com/api/v1
   // Physical device on the same Wi‑Fi as your PC (default below).
   // Android emulator only: use host loopback alias:
   //   flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
@@ -45,8 +47,9 @@ class AppConstants {
   static const String themeKey = 'theme_mode';
 
   // ─── HTTP timeouts (ms) ───────────────────────────────────────────────────
-  static const int connectTimeout = 15000;
-  static const int receiveTimeout = 30000;
+  // Render free tier can cold-start 30–60s; local Wi‑Fi may be slow too.
+  static const int connectTimeout = 60000;
+  static const int receiveTimeout = 60000;
 
   // ─── Named routes ─────────────────────────────────────────────────────────
   static const String routeSplash = '/';

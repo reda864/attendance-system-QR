@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 
@@ -40,17 +42,36 @@ class AttendanceService {
       final statusCode = response.statusCode ?? 0;
 
       if (statusCode == 200 || statusCode == 201) {
-        return AttendanceResult.success(
-          response.data as Map<String, dynamic>,
-        );
+        final body = _responseBodyAsMap(response.data);
+        if (body == null) {
+          debugPrint(
+            '[AttendanceService] Success status $statusCode but invalid body: '
+            '${response.data.runtimeType}',
+          );
+          return AttendanceResult.failure(
+            message:
+                'Réponse serveur invalide après validation. Vérifiez l’URL de l’API (Render / PC).',
+            type: AttendanceErrorType.unknown,
+          );
+        }
+        try {
+          return AttendanceResult.success(body);
+        } catch (e, st) {
+          debugPrint('[AttendanceService] Parse error: $e\n$st\nbody=$body');
+          return AttendanceResult.failure(
+            message:
+                'Réponse serveur illisible. Mettez à jour l’application ou contactez le support.',
+            type: AttendanceErrorType.unknown,
+          );
+        }
       }
 
       // Non-2xx without a thrown exception (edge case from validateStatus)
-      final data = response.data;
-      String message = 'Attendance validation failed.';
-      if (data is Map<String, dynamic>) {
-        message = data['error'] as String? ??
-            data['detail'] as String? ??
+      final data = _responseBodyAsMap(response.data);
+      String message = 'La validation de la présence a échoué.';
+      if (data != null) {
+        message = data['error']?.toString() ??
+            data['detail']?.toString() ??
             message;
       }
       return AttendanceResult.failure(message: message);
@@ -61,7 +82,8 @@ class AttendanceService {
       );
     } on TimeoutException {
       return AttendanceResult.failure(
-        message: 'Délai de la requête dépassé.',
+        message:
+            'Le serveur met trop de temps à répondre (Render peut mettre ~1 min au réveil). Réessayez dans un instant.',
         type: AttendanceErrorType.timeout,
       );
     } on ValidationException catch (e) {
@@ -115,6 +137,18 @@ class AttendanceService {
   }
 
   // ─── Device ID ────────────────────────────────────────────────────────────
+
+  Map<String, dynamic>? _responseBodyAsMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is String && data.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return null;
+  }
 
   Future<String> _getDeviceId() async {
     try {

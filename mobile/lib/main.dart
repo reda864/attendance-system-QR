@@ -19,6 +19,12 @@ import 'screens/validation_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  assert(() {
+    // ignore: avoid_print
+    print('[App] API base URL: ${AppConstants.baseUrl}');
+    return true;
+  }());
+
   // Lock orientation to portrait
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

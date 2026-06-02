@@ -336,10 +336,14 @@ class _LoggingInterceptor extends Interceptor {
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     assert(() {
       // ignore: avoid_print
+      final path = response.requestOptions.path;
+      final body = response.data;
+      final bodyPreview = body == null
+          ? ''
+          : ' body=${body.toString().length > 200 ? '${body.toString().substring(0, 200)}…' : body}';
       print(
         '[DIO] <-- ${response.statusCode} '
-        '${response.requestOptions.method.toUpperCase()} '
-        '${response.requestOptions.path}',
+        '${response.requestOptions.method.toUpperCase()} $path$bodyPreview',
       );
       return true;
     }());

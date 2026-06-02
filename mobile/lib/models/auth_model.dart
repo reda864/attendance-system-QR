@@ -187,8 +187,11 @@ class AttendanceResult {
   }
 
   String get errorTitle => errorType?.displayTitle ?? 'Error';
-  String get errorMessage =>
-      errorType?.displayMessage ?? rawErrorMessage ?? 'An error occurred.';
+  String get errorMessage {
+    final raw = rawErrorMessage?.trim();
+    if (raw != null && raw.isNotEmpty) return raw;
+    return errorType?.displayMessage ?? 'An error occurred.';
+  }
 
   @override
   String toString() => success
@@ -217,13 +220,23 @@ class AttendanceSuccessPayload {
 
   factory AttendanceSuccessPayload.fromJson(Map<String, dynamic> json) {
     return AttendanceSuccessPayload(
-      id: json['id'] as int,
-      student: json['student'] as int,
-      session: json['session'] as int,
-      validationTime: json['validation_time'] as String? ?? '',
-      ipAddress: json['ip_address'] as String?,
-      deviceId: json['device_id'] as String? ?? '',
+      id: _readInt(json['id'], 'id'),
+      student: _readInt(json['student'], 'student'),
+      session: _readInt(json['session'], 'session'),
+      validationTime: json['validation_time']?.toString() ?? '',
+      ipAddress: json['ip_address']?.toString(),
+      deviceId: json['device_id']?.toString() ?? '',
     );
+  }
+
+  static int _readInt(dynamic value, String field) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) {
+      final parsed = int.tryParse(value);
+      if (parsed != null) return parsed;
+    }
+    throw FormatException('Invalid $field in attendance response: $value');
   }
 
   Map<String, dynamic> toJson() => {

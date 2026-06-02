@@ -565,9 +565,9 @@ class _ErrorScreenState extends State<ErrorScreen>
         ];
       case AttendanceErrorType.timeout:
         return [
-          'Your network connection may be slow or unstable.',
-          'Try connecting to a faster Wi-Fi network.',
-          'Wait a few seconds and try submitting again.',
+          'If you use Render, open your API URL in a browser first to wake the server, then scan again.',
+          'Check mobile data or Wi‑Fi, then retry after 30–60 seconds.',
+          'For local dev on PC: run Django with runserver 0.0.0.0:8000 and set DEV_HOST to your PC IP.',
         ];
       case AttendanceErrorType.unknown:
         return [

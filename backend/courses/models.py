@@ -20,7 +20,7 @@ class Session(models.Model):
         related_name="sessions",
     )
     date = models.DateField()
-    qr_token = models.CharField(max_length=64, unique=True, blank=True)
+    qr_token = models.CharField(max_length=64, unique=True, blank=True, null=True)
     qr_expires_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
