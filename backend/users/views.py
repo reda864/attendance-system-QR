@@ -1,6 +1,7 @@
 import logging
 from typing import Type, cast
 
+from django.db.models import Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -81,7 +82,9 @@ class ClasseViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         user = self.request.user
         if user.role == "teacher":
-            return qs.filter(teachers=user).distinct()
+            return qs.filter(
+                Q(teachers=user) | Q(sessions__teacher=user)
+            ).distinct()
         return qs
 
 

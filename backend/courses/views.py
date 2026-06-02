@@ -38,9 +38,12 @@ class SessionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         if user.role == "teacher":
-            serializer.save(teacher=user)
+            session = serializer.save(teacher=user)
         else:
-            serializer.save()
+            session = serializer.save()
+        teacher = session.teacher
+        if teacher.role == "teacher":
+            teacher.assigned_classes.add(session.classe)
 
     def _check_session_access(self, request, session):
         if not session.teacher_can_manage(request.user):

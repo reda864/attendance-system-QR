@@ -256,6 +256,13 @@
         <label>Mot de passe</label>
         <input type="password" id="uPassword" placeholder="••••••••" />
       </div>
+      <div class="field" id="uClassesWrap">
+        <label>Classes assignées (enseignant)</label>
+        <select id="uClasses" multiple size="4"></select>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:0.35rem;">
+          Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs classes.
+        </p>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn outline" data-close="modalAddUser">Annuler</button>
@@ -463,8 +470,8 @@
     document.getElementById('euEmail').value = u.email;
     document.getElementById('euRole').value = u.role;
     document.getElementById('euPassword').value = '';
+    populateTeacherClassSelect('euClasses');
     const sel = document.getElementById('euClasses');
-    sel.innerHTML = allClasses.map(c => `<option value="${c.id}">${esc(c.name)} — ${esc(c.field)}</option>`).join('');
     const assigned = u.assigned_class_ids || [];
     Array.from(sel.options).forEach(o => { o.selected = assigned.includes(Number(o.value)) || assigned.includes(o.value); });
     document.getElementById('euClassesWrap').style.display = u.role === 'teacher' ? 'block' : 'none';
@@ -562,6 +569,14 @@
         </td>
       </tr>
     `).join('');
+  }
+
+  function populateTeacherClassSelect(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    sel.innerHTML = allClasses.map(c =>
+      `<option value="${c.id}">${esc(c.name)} — ${esc(c.field)}</option>`
+    ).join('');
   }
 
   function populateClasseSelects() {
@@ -814,7 +829,17 @@
   });
 
   /* ── Add User ── */
-  document.getElementById('btnOpenAddUser').addEventListener('click', () => openModal('modalAddUser'));
+  document.getElementById('btnOpenAddUser').addEventListener('click', () => {
+    populateTeacherClassSelect('uClasses');
+    document.getElementById('uClassesWrap').style.display =
+      document.getElementById('uRole').value === 'teacher' ? 'block' : 'none';
+    openModal('modalAddUser');
+  });
+
+  document.getElementById('uRole')?.addEventListener('change', (e) => {
+    document.getElementById('uClassesWrap').style.display =
+      e.target.value === 'teacher' ? 'block' : 'none';
+  });
 
   document.getElementById('btnSubmitUser').addEventListener('click', async () => {
     const body = {
@@ -824,9 +849,14 @@
       role:       document.getElementById('uRole').value,
       password:   document.getElementById('uPassword').value,
     };
+    if (body.role === 'teacher') {
+      body.assigned_class_ids = Array.from(
+        document.getElementById('uClasses').selectedOptions
+      ).map(o => Number(o.value));
+    }
 
     if (!body.first_name || !body.last_name || !body.email || !body.password) {
-      showToast('Please fill in all fields.', 'error'); return;
+      showToast('Veuillez remplir tous les champs.', 'error'); return;
     }
 
     try {
