@@ -199,6 +199,10 @@
                 } catch (_) {}
             }
 
+            function roundGps(value) {
+                return Math.round(value * 1e7) / 1e7;
+            }
+
             function captureLocation() {
                 return new Promise((resolve) => {
                     if (!navigator.geolocation) {
@@ -207,8 +211,8 @@
                     }
                     navigator.geolocation.getCurrentPosition(
                         (pos) => {
-                            latitude = pos.coords.latitude;
-                            longitude = pos.coords.longitude;
+                            latitude = roundGps(pos.coords.latitude);
+                            longitude = roundGps(pos.coords.longitude);
                             resolve(true);
                         },
                         () => resolve(false),

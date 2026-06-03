@@ -218,6 +218,10 @@
             let sessionMap = null;
             let pendingQrSessionId = null;
 
+            function roundGps(value) {
+                return Math.round(value * 1e7) / 1e7;
+            }
+
             /* ═══════════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════════ */
@@ -722,8 +726,8 @@
                 }
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        qrGenLatitude = pos.coords.latitude;
-                        qrGenLongitude = pos.coords.longitude;
+                        qrGenLatitude = roundGps(pos.coords.latitude);
+                        qrGenLongitude = roundGps(pos.coords.longitude);
                         document.getElementById("qrLocationStatus").textContent =
                             `✅ Position capturée (${qrGenLatitude.toFixed(5)}, ${qrGenLongitude.toFixed(5)})`;
                     },

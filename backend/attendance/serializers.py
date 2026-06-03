@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import Attendance, SuspiciousAttempt
+from .utils import round_coordinate
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -110,6 +111,12 @@ class ValidateAttendanceSerializer(serializers.Serializer):
         max_digits=10, decimal_places=7, required=False, allow_null=True
     )
 
+    def validate_latitude(self, value):
+        return round_coordinate(value)
+
+    def validate_longitude(self, value):
+        return round_coordinate(value)
+
 
 class ValidateAppAttendanceSerializer(serializers.Serializer):
     qr_token = serializers.CharField(max_length=100)
@@ -124,3 +131,9 @@ class ValidateAppAttendanceSerializer(serializers.Serializer):
     longitude = serializers.DecimalField(
         max_digits=10, decimal_places=7, required=False, allow_null=True
     )
+
+    def validate_latitude(self, value):
+        return round_coordinate(value)
+
+    def validate_longitude(self, value):
+        return round_coordinate(value)

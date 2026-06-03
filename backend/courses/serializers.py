@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from attendance.utils import round_coordinate
+
 from .models import Session
 
 
@@ -66,3 +68,9 @@ class GenerateQRSerializer(serializers.Serializer):
     longitude = serializers.DecimalField(
         max_digits=10, decimal_places=7, required=False, allow_null=True
     )
+
+    def validate_latitude(self, value):
+        return round_coordinate(value)
+
+    def validate_longitude(self, value):
+        return round_coordinate(value)

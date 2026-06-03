@@ -1,5 +1,17 @@
 import hashlib
 import math
+from decimal import Decimal, ROUND_HALF_UP
+
+GPS_DECIMAL_PLACES = 7
+
+
+def round_coordinate(value, places: int = GPS_DECIMAL_PLACES):
+    """Round GPS to fit DecimalField(max_digits=10, decimal_places=7)."""
+    if value is None:
+        return None
+    d = Decimal(str(value))
+    quantizer = Decimal(10) ** -places
+    return d.quantize(quantizer, rounding=ROUND_HALF_UP)
 
 
 def haversine_distance_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
