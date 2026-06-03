@@ -8,6 +8,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from config.site_url import build_attend_url
 from users.permissions import IsAdmin, IsAdminOrTeacher
 
 from .models import Session
@@ -80,10 +82,7 @@ class SessionViewSet(viewsets.ModelViewSet):
             longitude=longitude,
         )
 
-        site_base = getattr(settings, "SITE_BASE_URL", "http://localhost:8000").rstrip(
-            "/"
-        )
-        qr_url = f"{site_base}/attend/?token={session.qr_token}"
+        qr_url = build_attend_url(request, session.qr_token)
 
         qr = qrcode.QRCode(
             version=1,

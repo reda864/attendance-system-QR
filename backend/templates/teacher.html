@@ -922,10 +922,17 @@
             <span style="font-weight:600">${formatTime(expiresAt)}</span>
           </div>
           <div class="qr-meta-row">
-            <span class="qr-meta-label">Duration</span>
-            <span>20 minutes</span>
+            <span class="qr-meta-label">Rayon GPS</span>
+            <span>${data.attendance_radius_meters || 50} m</span>
           </div>
         </div>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:.75rem;line-height:1.4">
+          📱 Les étudiants peuvent scanner avec l'<strong>appareil photo</strong> (page web)
+          ou l'<strong>application PrésenceQR</strong>.
+        </p>
+        <p style="font-size:.7rem;color:var(--muted);word-break:break-all;margin-top:.35rem">
+          ${esc(data.qr_url || "")}
+        </p>
         <div class="countdown" id="inlineCountdown">—:——</div>
         <div class="countdown-label">remaining</div>
         <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap">

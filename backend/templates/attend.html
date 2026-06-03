@@ -41,6 +41,7 @@
                 border-radius: 10px;
                 margin-bottom: 1rem;
                 font-size: 0.9rem;
+                line-height: 1.45;
             }
             .status-banner.error {
                 background: #fef2f2;
@@ -56,6 +57,11 @@
                 background: #eff6ff;
                 color: #1d4ed8;
                 border: 1px solid #bfdbfe;
+            }
+            .status-banner.warning {
+                background: #fffbeb;
+                color: #92400e;
+                border: 1px solid #fde68a;
             }
             .field {
                 margin-bottom: 1rem;
@@ -78,6 +84,7 @@
                 font-size: 0.75rem;
                 color: #6b7280;
                 margin-top: 1rem;
+                line-height: 1.5;
             }
             .app-link-hint {
                 text-align: center;
@@ -87,6 +94,28 @@
             }
             .app-link-hint a {
                 color: #2563eb;
+                font-weight: 600;
+            }
+            .security-note {
+                font-size: 0.78rem;
+                color: #6b7280;
+                margin-bottom: 1rem;
+                line-height: 1.45;
+            }
+            .gps-status {
+                font-size: 0.8rem;
+                margin-bottom: 1rem;
+                padding: 0.5rem 0.75rem;
+                border-radius: 8px;
+                background: #f9fafb;
+            }
+            .gps-status.ok {
+                color: #15803d;
+                background: #f0fdf4;
+            }
+            .gps-status.missing {
+                color: #b45309;
+                background: #fffbeb;
             }
         </style>
     </head>
@@ -95,7 +124,7 @@
             <div class="attend-card">
                 <h1>📋 Marquer la présence</h1>
                 <p style="color: #6b7280; margin-bottom: 1rem">
-                    Remplissez le formulaire ci-dessous ou ouvrez l'application mobile.
+                    Scanné avec l'appareil photo ? Remplissez le formulaire ci-dessous.
                 </p>
 
                 <div id="statusBanner" class="status-banner info" style="display: none"></div>
@@ -107,34 +136,61 @@
                     <p>📅 <span id="sessionDate">—</span></p>
                 </div>
 
+                <p class="security-note" id="securityNote" style="display: none">
+                    🔒 Une seule présence par téléphone pour cette séance. Vos informations
+                    (nom, Massar) doivent correspondre aux données de l'établissement.
+                    L'adresse IP et la position GPS sont enregistrées.
+                </p>
+
+                <div id="gpsStatus" class="gps-status missing" style="display: none">
+                    📍 Localisation en cours…
+                </div>
+
                 <form id="attendForm" style="display: none">
                     <div class="field">
                         <label for="firstName">Prénom</label>
-                        <input type="text" id="firstName" required autocomplete="given-name" />
+                        <input
+                            type="text"
+                            id="firstName"
+                            required
+                            autocomplete="given-name"
+                            placeholder="Votre prénom"
+                        />
                     </div>
                     <div class="field">
                         <label for="lastName">Nom</label>
-                        <input type="text" id="lastName" required autocomplete="family-name" />
+                        <input
+                            type="text"
+                            id="lastName"
+                            required
+                            autocomplete="family-name"
+                            placeholder="Votre nom de famille"
+                        />
                     </div>
                     <div class="field">
                         <label for="codeMassar">Code Massar</label>
-                        <input type="text" id="codeMassar" required autocomplete="off" />
+                        <input
+                            type="text"
+                            id="codeMassar"
+                            required
+                            autocomplete="off"
+                            placeholder="Ex. M123456789"
+                        />
                     </div>
                     <button type="submit" class="btn" id="submitBtn" style="width: 100%">
-                        ✅ Valider la présence
+                        ✅ Valider ma présence
                     </button>
                 </form>
 
                 <div class="meta-info" id="metaInfo"></div>
 
                 <div class="app-link-hint">
-                    Vous avez l'application ?
-                    <a href="#" id="openAppLink">Ouvrir dans PrésenceQR</a>
+                    Vous avez l'application PrésenceQR ?
+                    <a href="#" id="openAppLink">Ouvrir dans l'app</a>
                 </div>
             </div>
         </div>
 
-        <script src="/api.js"></script>
         <script>
             const APP_SCHEME = "presenceqr";
             const params = new URLSearchParams(window.location.search);
@@ -144,7 +200,8 @@
             let deviceInfo = "";
             let latitude = null;
             let longitude = null;
-            let publicIp = "";
+            let locationRequired = false;
+            let sessionValid = false;
 
             function showBanner(message, type) {
                 const el = document.getElementById("statusBanner");
@@ -188,19 +245,28 @@
                     platform: navigator.platform,
                     language: navigator.language,
                     device_id: getOrCreateDeviceId(),
+                    source: "phone_camera_web",
                 });
-            }
-
-            async function fetchPublicIp() {
-                try {
-                    const res = await fetch("https://api.ipify.org?format=json");
-                    const data = await res.json();
-                    publicIp = data.ip || "";
-                } catch (_) {}
             }
 
             function roundGps(value) {
                 return Math.round(value * 1e7) / 1e7;
+            }
+
+            function updateGpsStatus() {
+                const el = document.getElementById("gpsStatus");
+                el.style.display = "block";
+                if (latitude !== null && longitude !== null) {
+                    el.className = "gps-status ok";
+                    el.textContent = `📍 Position capturée (${latitude}, ${longitude})`;
+                } else if (locationRequired) {
+                    el.className = "gps-status missing";
+                    el.textContent =
+                        "📍 Activez la localisation GPS dans votre navigateur pour continuer.";
+                } else {
+                    el.className = "gps-status missing";
+                    el.textContent = "📍 Localisation non disponible (optionnelle).";
+                }
             }
 
             function captureLocation() {
@@ -213,29 +279,35 @@
                         (pos) => {
                             latitude = roundGps(pos.coords.latitude);
                             longitude = roundGps(pos.coords.longitude);
+                            updateGpsStatus();
                             resolve(true);
                         },
-                        () => resolve(false),
-                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+                        () => {
+                            updateGpsStatus();
+                            resolve(false);
+                        },
+                        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
                     );
                 });
             }
 
-            function tryOpenApp() {
+            function setupAppLink() {
                 if (!qrToken) return;
                 const deepLink = `${APP_SCHEME}://attend?token=${encodeURIComponent(qrToken)}`;
-                document.getElementById("openAppLink").href = deepLink;
-
-                const iframe = document.createElement("iframe");
-                iframe.style.display = "none";
-                iframe.src = deepLink;
-                document.body.appendChild(iframe);
-                setTimeout(() => iframe.remove(), 1500);
+                const link = document.getElementById("openAppLink");
+                link.href = deepLink;
+                link.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    window.location.href = deepLink;
+                });
             }
 
             async function loadSessionInfo() {
                 if (!qrToken) {
-                    showBanner("Code QR manquant dans l'URL.", "error");
+                    showBanner(
+                        "Lien invalide. Scannez à nouveau le QR affiché par votre enseignant.",
+                        "error",
+                    );
                     return;
                 }
 
@@ -249,14 +321,18 @@
                         showBanner(
                             data.error ||
                                 (data.expired
-                                    ? "Ce code QR a expiré."
+                                    ? "Ce code QR a expiré. Demandez un nouveau QR à l'enseignant."
                                     : "Code QR invalide ou séance inactive."),
                             "error",
                         );
                         return;
                     }
 
+                    sessionValid = true;
+                    locationRequired = !!data.requires_location;
+
                     document.getElementById("sessionInfo").style.display = "block";
+                    document.getElementById("securityNote").style.display = "block";
                     document.getElementById("sessionSubject").textContent = data.subject;
                     document.getElementById("sessionClasse").textContent = data.classe;
                     document.getElementById("sessionTeacher").textContent = data.teacher;
@@ -264,24 +340,45 @@
 
                     document.getElementById("attendForm").style.display = "block";
 
-                    if (data.requires_location) {
+                    if (locationRequired) {
                         showBanner(
-                            "La localisation GPS est requise pour valider la présence.",
+                            "Autorisez la localisation GPS : elle est obligatoire pour valider la présence.",
+                            "warning",
+                        );
+                    } else {
+                        showBanner(
+                            "Complétez le formulaire avec vos informations officielles.",
                             "info",
                         );
                     }
+
+                    await captureLocation();
                 } catch (e) {
-                    showBanner("Impossible de vérifier le code QR.", "error");
+                    showBanner("Impossible de contacter le serveur. Vérifiez votre connexion.", "error");
                 }
             }
 
             document.getElementById("attendForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
+                if (!sessionValid) return;
+
                 const btn = document.getElementById("submitBtn");
                 btn.disabled = true;
                 btn.textContent = "⏳ Validation…";
 
-                await captureLocation();
+                if (latitude === null || longitude === null) {
+                    await captureLocation();
+                }
+
+                if (locationRequired && (latitude === null || longitude === null)) {
+                    showBanner(
+                        "La localisation GPS est obligatoire. Activez-la dans les paramètres du navigateur.",
+                        "error",
+                    );
+                    btn.disabled = false;
+                    btn.textContent = "✅ Valider ma présence";
+                    return;
+                }
 
                 try {
                     const res = await fetch("/api/v1/attendance/validate/", {
@@ -303,28 +400,31 @@
                     const data = await res.json();
 
                     if (res.ok) {
-                        showBanner("✅ Présence enregistrée avec succès !", "success");
+                        showBanner(
+                            "✅ Présence enregistrée ! Vous ne pouvez pas scanner à nouveau depuis ce téléphone.",
+                            "success",
+                        );
                         document.getElementById("attendForm").style.display = "none";
                     } else {
-                        showBanner(data.error || "Échec de la validation.", "error");
+                        const msg = data.error || "Échec de la validation.";
+                        showBanner(msg, "error");
                         btn.disabled = false;
-                        btn.textContent = "✅ Valider la présence";
+                        btn.textContent = "✅ Valider ma présence";
                     }
                 } catch (err) {
                     showBanner("Erreur réseau. Réessayez.", "error");
                     btn.disabled = false;
-                    btn.textContent = "✅ Valider la présence";
+                    btn.textContent = "✅ Valider ma présence";
                 }
             });
 
             (async function init() {
                 deviceFingerprint = buildDeviceFingerprint();
                 deviceInfo = buildDeviceInfo();
-                await fetchPublicIp();
                 document.getElementById("metaInfo").textContent =
-                    `IP: ${publicIp || "—"} · Empreinte: ${deviceFingerprint.substring(0, 12)}…`;
+                    "Cet appareil est identifié pour éviter les doubles scans.";
 
-                tryOpenApp();
+                setupAppLink();
                 await loadSessionInfo();
             })();
         </script>

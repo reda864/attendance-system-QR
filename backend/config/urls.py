@@ -7,7 +7,7 @@ import os
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponseRedirect
 from django.urls import include, path, re_path
 from django.views.generic import RedirectView, TemplateView
 from drf_yasg import openapi
@@ -82,6 +82,11 @@ def serve_css(filename):
     return view
 
 
+def redirect_attend_token(request, token):
+    """Support /attend/TOKEN/ for basic phone QR scanners."""
+    return HttpResponseRedirect(f"/attend/?token={token}")
+
+
 # ---------------------------------------------------------------------------
 # API v1 router
 # ---------------------------------------------------------------------------
@@ -107,6 +112,11 @@ urlpatterns = [
     path("teacher/", serve_template("teacher.html"), name="teacher-page"),
     path("student/", serve_template("student.html"), name="student-page"),
     path("attend/", serve_template("attend.html"), name="attend-page"),
+    re_path(
+        r"^attend/(?P<token>[A-Za-z0-9_\-]+)/?$",
+        redirect_attend_token,
+        name="attend-token-redirect",
+    ),
     path("api.js", serve_js("api.js"), name="api-js"),
     path("i18n-fr.js", serve_js("i18n-fr.js"), name="i18n-fr"),
     path("dashboard.css", serve_css("dashboard.css"), name="dashboard-css"),
