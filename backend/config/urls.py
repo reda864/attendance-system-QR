@@ -106,6 +106,7 @@ urlpatterns = [
     path("admin-ui/", serve_template("admin.html"), name="admin-page"),
     path("teacher/", serve_template("teacher.html"), name="teacher-page"),
     path("student/", serve_template("student.html"), name="student-page"),
+    path("attend/", serve_template("attend.html"), name="attend-page"),
     path("api.js", serve_js("api.js"), name="api-js"),
     path("i18n-fr.js", serve_js("i18n-fr.js"), name="i18n-fr"),
     path("dashboard.css", serve_css("dashboard.css"), name="dashboard-css"),

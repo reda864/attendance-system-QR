@@ -104,4 +104,7 @@ class MeView(APIView):
 
     def get(self, request):
         user = cast(User, request.user)
+        user = User.objects.prefetch_related("assigned_classes").select_related(
+            "student_profile__classe"
+        ).get(pk=user.pk)
         return Response(UserSerializer(user).data)

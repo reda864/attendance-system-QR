@@ -35,6 +35,15 @@ dependencies:
   # Device Info (for device_id)
   device_info_plus: ^11.2.0
 
+  # Location (GPS for geofencing)
+  geolocator: ^13.0.2
+
+  # Deep linking (QR opens app directly)
+  app_links: ^6.3.3
+
+  # Hashing for device fingerprint
+  crypto: ^3.0.6
+
   # UUID
   uuid: ^4.5.1
 

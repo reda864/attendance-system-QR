@@ -9,6 +9,8 @@ import '../l10n/app_strings.dart';
 import '../constants/app_constants.dart';
 import '../constants/app_theme.dart';
 import '../providers/attendance_provider.dart';
+import '../providers/auth_provider.dart';
+import '../services/deep_link_service.dart';
 import '../utils/validators.dart';
 
 class QrScannerScreen extends StatefulWidget {
@@ -81,9 +83,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   Future<void> _processQrValue(String rawValue) async {
     if (_isProcessing || _hasDetected || !mounted) return;
 
-    final token = _extractTokenFromQr(rawValue);
+    final token = DeepLinkService.extractTokenFromRaw(rawValue);
 
-    // Accept either a raw UUID token or a validate URL containing ?token=
+    // Accept either a raw token or a deep link / attend URL containing ?token=
     if (token == null || !Validators.isValidQrToken(token)) {
       _showInvalidQrFeedback(rawValue);
       return;
@@ -105,33 +107,41 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     // Store token in provider
     context.read<AttendanceProvider>().setScannedToken(token);
 
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.user;
+    final hasProfile = user?.studentProfile != null;
+
+    if (authProvider.isAuthenticated && hasProfile) {
+      final attendanceProvider = context.read<AttendanceProvider>();
+      final result = await attendanceProvider.validateFromApp(qrToken: token);
+      if (!mounted) return;
+
+      if (result.success) {
+        Navigator.of(context).pushReplacementNamed(AppConstants.routeSuccess);
+      } else {
+        Navigator.of(context).pushReplacementNamed(AppConstants.routeError);
+      }
+      return;
+    }
+
+    // Prefill form when profile is available
+    if (user?.studentProfile != null) {
+      final profile = user!.studentProfile!;
+      context.read<AttendanceProvider>().prefillStudentInfo(
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            codeMassar: profile.codeMassar,
+          );
+    }
+
     // Brief pause for UX
     await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
 
-    // Navigate to validation screen
+    // Navigate to validation screen (manual form fallback)
     Navigator.of(context).pushReplacementNamed(
       AppConstants.routeValidation,
     );
-  }
-
-  String? _extractTokenFromQr(String rawValue) {
-    final value = rawValue.trim();
-    if (value.isEmpty) return null;
-
-    if (Validators.isValidQrToken(value)) {
-      return value;
-    }
-
-    final uri = Uri.tryParse(value);
-    if (uri == null) return null;
-
-    final tokenFromQuery = uri.queryParameters['token']?.trim();
-    if (tokenFromQuery != null && tokenFromQuery.isNotEmpty) {
-      return tokenFromQuery;
-    }
-
-    return null;
   }
 
   void _showInvalidQrFeedback(String rawValue) {

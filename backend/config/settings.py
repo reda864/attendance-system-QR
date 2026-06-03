@@ -198,12 +198,21 @@ MEDIA_ROOT = BASE_DIR / "media"
 # ---------------------------------------------------------------------------
 # QR Code settings (custom)
 # ---------------------------------------------------------------------------
+SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "http://localhost:8000")
+APP_DEEP_LINK_SCHEME = os.environ.get("APP_DEEP_LINK_SCHEME", "presenceqr")
 QR_CODE_BASE_URL = os.environ.get(
-    "QR_CODE_BASE_URL", "http://localhost:8000/api/v1/attendance/validate/"
+    "QR_CODE_BASE_URL", f"{SITE_BASE_URL.rstrip('/')}/attend/"
 )
 QR_TOKEN_DEFAULT_EXPIRY_MINUTES = int(
     os.environ.get("QR_TOKEN_DEFAULT_EXPIRY_MINUTES", "20")
 )
+
+# HTTPS security (enabled when DEBUG=False)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True") == "True"
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # ---------------------------------------------------------------------------
 # Password validation

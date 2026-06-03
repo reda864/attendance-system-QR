@@ -21,7 +21,11 @@ class SessionSerializer(serializers.ModelSerializer):
             "classe_field",
             "date",
             "qr_token",
+            "qr_session_id",
             "qr_expires_at",
+            "attendance_radius_meters",
+            "location_latitude",
+            "location_longitude",
             "is_active",
             "is_qr_valid",
             "created_at",
@@ -29,7 +33,11 @@ class SessionSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "qr_token",
+            "qr_session_id",
             "qr_expires_at",
+            "attendance_radius_meters",
+            "location_latitude",
+            "location_longitude",
             "is_qr_valid",
             "created_at",
         ]
@@ -49,3 +57,12 @@ class SessionSerializer(serializers.ModelSerializer):
 
 class GenerateQRSerializer(serializers.Serializer):
     expiry_minutes = serializers.IntegerField(min_value=1, max_value=120, default=20)
+    attendance_radius_meters = serializers.IntegerField(
+        min_value=20, max_value=200, default=50
+    )
+    latitude = serializers.DecimalField(
+        max_digits=10, decimal_places=7, required=False, allow_null=True
+    )
+    longitude = serializers.DecimalField(
+        max_digits=10, decimal_places=7, required=False, allow_null=True
+    )

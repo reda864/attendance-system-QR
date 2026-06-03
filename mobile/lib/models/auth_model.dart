@@ -52,6 +52,8 @@ class ValidateAttendanceRequest {
   final String lastName;
   final String codeMassar;
   final String deviceId;
+  final String deviceFingerprint;
+  final String deviceInfo;
 
   ValidateAttendanceRequest({
     required this.qrToken,
@@ -59,6 +61,8 @@ class ValidateAttendanceRequest {
     required this.lastName,
     required this.codeMassar,
     this.deviceId = '',
+    this.deviceFingerprint = '',
+    this.deviceInfo = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -139,17 +143,32 @@ extension AttendanceErrorTypeX on AttendanceErrorType {
   /// Maps a raw error string from the Django backend to a typed error.
   static AttendanceErrorType fromBackendMessage(String message) {
     final lower = message.toLowerCase();
-    if (lower.contains('expired')) return AttendanceErrorType.expired;
-    if (lower.contains('already')) return AttendanceErrorType.alreadyValidated;
-    if (lower.contains('invalid qr') || lower.contains('invalid token')) {
+    if (lower.contains('expired') || lower.contains('expiré')) {
+      return AttendanceErrorType.expired;
+    }
+    if (lower.contains('already') || lower.contains('déjà')) {
+      return AttendanceErrorType.alreadyValidated;
+    }
+    if (lower.contains('invalid qr') ||
+        lower.contains('invalid token') ||
+        lower.contains('invalide')) {
       return AttendanceErrorType.invalidQr;
     }
-    if (lower.contains('no longer active') || lower.contains('not active')) {
+    if (lower.contains('no longer active') ||
+        lower.contains('not active') ||
+        lower.contains('plus active')) {
       return AttendanceErrorType.sessionClosed;
     }
-    if (lower.contains('not found')) return AttendanceErrorType.studentNotFound;
-    if (lower.contains('name does not match') || lower.contains('mismatch')) {
+    if (lower.contains('not found') || lower.contains('introuvable')) {
+      return AttendanceErrorType.studentNotFound;
+    }
+    if (lower.contains('name does not match') ||
+        lower.contains('mismatch') ||
+        lower.contains('ne correspond pas')) {
       return AttendanceErrorType.nameMismatch;
+    }
+    if (lower.contains('zone') || lower.contains('localisation')) {
+      return AttendanceErrorType.unknown;
     }
     return AttendanceErrorType.unknown;
   }

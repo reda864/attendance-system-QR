@@ -9,6 +9,7 @@ import 'providers/attendance_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/error_screen.dart';
+import 'services/deep_link_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/qr_scanner_screen.dart';
@@ -45,8 +46,42 @@ void main() async {
   runApp(const AttendanceApp());
 }
 
-class AttendanceApp extends StatelessWidget {
+class AttendanceApp extends StatefulWidget {
   const AttendanceApp({super.key});
+
+  @override
+  State<AttendanceApp> createState() => _AttendanceAppState();
+}
+
+class _AttendanceAppState extends State<AttendanceApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeepLinkService.instance.init(_onDeepLink);
+    });
+  }
+
+  @override
+  void dispose() {
+    DeepLinkService.instance.dispose();
+    super.dispose();
+  }
+
+  void _onDeepLink(String token) {
+    final navContext = _navigatorKey.currentContext;
+    if (navContext == null) return;
+
+    final authProvider = navContext.read<AuthProvider>();
+    handleDeepLinkToken(
+      navContext,
+      token,
+      isAuthenticated: authProvider.isAuthenticated,
+      hasStudentProfile: authProvider.user?.studentProfile != null,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +94,7 @@ class AttendanceApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
+            navigatorKey: _navigatorKey,
             title: AppConstants.appName,
             debugShowCheckedModeBanner: false,
             locale: const Locale('fr', 'FR'),

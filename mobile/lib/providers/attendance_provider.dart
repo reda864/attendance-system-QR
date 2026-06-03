@@ -151,14 +151,53 @@ class AttendanceProvider extends ChangeNotifier {
     _errorType = null;
     notifyListeners();
 
+    final metadata = await _attendanceService.getDeviceMetadata();
+    final location = await _attendanceService.getCurrentLocation();
+
     final request = ValidateAttendanceRequest(
       qrToken: qrToken,
       firstName: firstName,
       lastName: lastName,
       codeMassar: codeMassar,
+      deviceId: metadata.deviceId,
+      deviceFingerprint: metadata.fingerprint,
+      deviceInfo: metadata.deviceInfo,
     );
 
-    final result = await _attendanceService.validateAttendance(request);
+    final result = await _attendanceService.validateAttendance(
+      request,
+      latitude: location?.latitude,
+      longitude: location?.longitude,
+    );
+    _applyResult(result);
+    return result;
+  }
+
+  /// Authenticated mobile path — uses JWT and linked student profile.
+  Future<AttendanceResult> validateFromApp({required String qrToken}) async {
+    final isConnected = await _connectivityService.isConnected();
+    if (!isConnected) {
+      final result = AttendanceResult.failure(
+        message: 'Pas de connexion Internet.',
+        type: AttendanceErrorType.noInternet,
+      );
+      _applyResult(result);
+      return result;
+    }
+
+    _validationStatus = AttendanceValidationStatus.loading;
+    _lastResult = null;
+    _errorTitle = null;
+    _errorMessage = null;
+    _errorType = null;
+    notifyListeners();
+
+    final location = await _attendanceService.getCurrentLocation();
+    final result = await _attendanceService.validateAttendanceFromApp(
+      qrToken: qrToken,
+      latitude: location?.latitude,
+      longitude: location?.longitude,
+    );
     _applyResult(result);
     return result;
   }

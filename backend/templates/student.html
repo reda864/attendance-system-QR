@@ -184,7 +184,7 @@
     try {
       let records = [];
       try {
-        const data = await API.apiFetch('/attendance/me/');
+        const data = await API.apiFetch('/attendance/my/');
         records = Array.isArray(data) ? data : (data.results || []);
       } catch { records = []; }
 

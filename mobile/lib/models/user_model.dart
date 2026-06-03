@@ -1,3 +1,41 @@
+class StudentProfile {
+  final int id;
+  final String firstName;
+  final String lastName;
+  final String codeMassar;
+  final int? classeId;
+  final String? classeName;
+
+  StudentProfile({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.codeMassar,
+    this.classeId,
+    this.classeName,
+  });
+
+  factory StudentProfile.fromJson(Map<String, dynamic> json) {
+    return StudentProfile(
+      id: json['id'] as int,
+      firstName: json['first_name'] as String? ?? '',
+      lastName: json['last_name'] as String? ?? '',
+      codeMassar: json['code_massar'] as String? ?? '',
+      classeId: json['classe_id'] as int?,
+      classeName: json['classe_name'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'first_name': firstName,
+        'last_name': lastName,
+        'code_massar': codeMassar,
+        'classe_id': classeId,
+        'classe_name': classeName,
+      };
+}
+
 class UserModel {
   final int id;
   final String firstName;
@@ -5,6 +43,7 @@ class UserModel {
   final String email;
   final String role;
   final String createdAt;
+  final StudentProfile? studentProfile;
 
   UserModel({
     required this.id,
@@ -13,9 +52,15 @@ class UserModel {
     required this.email,
     required this.role,
     required this.createdAt,
+    this.studentProfile,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    StudentProfile? profile;
+    final rawProfile = json['student_profile'];
+    if (rawProfile is Map<String, dynamic>) {
+      profile = StudentProfile.fromJson(rawProfile);
+    }
     return UserModel(
       id: json['id'] as int,
       firstName: json['first_name'] as String? ?? '',
@@ -23,6 +68,7 @@ class UserModel {
       email: json['email'] as String? ?? '',
       role: json['role'] as String? ?? '',
       createdAt: json['created_at'] as String? ?? '',
+      studentProfile: profile,
     );
   }
 
@@ -33,6 +79,7 @@ class UserModel {
         'email': email,
         'role': role,
         'created_at': createdAt,
+        if (studentProfile != null) 'student_profile': studentProfile!.toJson(),
       };
 
   String get fullName => '$firstName $lastName'.trim();

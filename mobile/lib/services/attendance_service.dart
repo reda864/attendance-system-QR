@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../constants/app_constants.dart';
 import '../models/auth_model.dart';
@@ -16,41 +19,63 @@ class AttendanceService {
       : _client = client ?? DioClient(),
         _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
 
-  // ─── Validate Attendance ─────────────────────────────────────────────────
-
-  /// Sends attendance validation to the backend.
-  /// Returns an [AttendanceResult] — never throws directly.
   Future<AttendanceResult> validateAttendance(
-    ValidateAttendanceRequest request,
-  ) async {
-    try {
-      final deviceId = await _getDeviceId();
-
-      final payload = {
+    ValidateAttendanceRequest request, {
+    double? latitude,
+    double? longitude,
+  }) async {
+    return _submitValidation(
+      endpoint: AppConstants.validateAttendanceEndpoint,
+      payload: {
         'qr_token': request.qrToken,
         'first_name': request.firstName.trim(),
         'last_name': request.lastName.trim(),
         'code_massar': request.codeMassar.trim(),
+        'device_id': request.deviceId,
+        'device_fingerprint': request.deviceFingerprint,
+        'device_info': request.deviceInfo,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      },
+    );
+  }
+
+  Future<AttendanceResult> validateAttendanceFromApp({
+    required String qrToken,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final deviceId = await _getDeviceId();
+    final deviceInfo = await _getDeviceInfo();
+    final fingerprint = _computeFingerprint(deviceId, deviceInfo);
+
+    return _submitValidation(
+      endpoint: AppConstants.validateAppAttendanceEndpoint,
+      payload: {
+        'qr_token': qrToken,
         'device_id': deviceId,
-      };
+        'device_fingerprint': fingerprint,
+        'device_info': deviceInfo,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      },
+    );
+  }
 
-      final response = await _client.post(
-        AppConstants.validateAttendanceEndpoint,
-        data: payload,
-      );
-
+  Future<AttendanceResult> _submitValidation({
+    required String endpoint,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final response = await _client.post(endpoint, data: payload);
       final statusCode = response.statusCode ?? 0;
 
       if (statusCode == 200 || statusCode == 201) {
         final body = _responseBodyAsMap(response.data);
         if (body == null) {
-          debugPrint(
-            '[AttendanceService] Success status $statusCode but invalid body: '
-            '${response.data.runtimeType}',
-          );
           return AttendanceResult.failure(
             message:
-                'Réponse serveur invalide après validation. Vérifiez l’URL de l’API (Render / PC).',
+                'Réponse serveur invalide après validation. Vérifiez l’URL de l’API.',
             type: AttendanceErrorType.unknown,
           );
         }
@@ -59,14 +84,12 @@ class AttendanceService {
         } catch (e, st) {
           debugPrint('[AttendanceService] Parse error: $e\n$st\nbody=$body');
           return AttendanceResult.failure(
-            message:
-                'Réponse serveur illisible. Mettez à jour l’application ou contactez le support.',
+            message: 'Réponse serveur illisible.',
             type: AttendanceErrorType.unknown,
           );
         }
       }
 
-      // Non-2xx without a thrown exception (edge case from validateStatus)
       final data = _responseBodyAsMap(response.data);
       String message = 'La validation de la présence a échoué.';
       if (data != null) {
@@ -82,8 +105,7 @@ class AttendanceService {
       );
     } on TimeoutException {
       return AttendanceResult.failure(
-        message:
-            'Le serveur met trop de temps à répondre (Render peut mettre ~1 min au réveil). Réessayez dans un instant.',
+        message: 'Le serveur met trop de temps à répondre. Réessayez.',
         type: AttendanceErrorType.timeout,
       );
     } on ValidationException catch (e) {
@@ -98,10 +120,28 @@ class AttendanceService {
     }
   }
 
-  // ─── My Attendance History ────────────────────────────────────────────────
+  Future<({double latitude, double longitude})?> getCurrentLocation() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return null;
 
-  /// Fetches the attendance history list for the logged-in student.
-  /// Returns a list of raw JSON maps, or throws on network / auth errors.
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 15),
+      ),
+    );
+    return (latitude: position.latitude, longitude: position.longitude);
+  }
+
   Future<List<Map<String, dynamic>>> fetchMyAttendance({
     int page = 1,
     int pageSize = 20,
@@ -121,7 +161,6 @@ class AttendanceService {
         if (data is List) {
           return data.cast<Map<String, dynamic>>();
         }
-        // DRF paginated response
         if (data is Map<String, dynamic> && data['results'] is List) {
           return (data['results'] as List).cast<Map<String, dynamic>>();
         }
@@ -136,7 +175,17 @@ class AttendanceService {
     }
   }
 
-  // ─── Device ID ────────────────────────────────────────────────────────────
+  Future<({String deviceId, String deviceInfo, String fingerprint})>
+      getDeviceMetadata() async {
+    final deviceId = await _getDeviceId();
+    final deviceInfo = await _getDeviceInfo();
+    final fingerprint = _computeFingerprint(deviceId, deviceInfo);
+    return (
+      deviceId: deviceId,
+      deviceInfo: deviceInfo,
+      fingerprint: fingerprint,
+    );
+  }
 
   Map<String, dynamic>? _responseBodyAsMap(dynamic data) {
     if (data is Map<String, dynamic>) return data;
@@ -159,9 +208,34 @@ class AttendanceService {
         final info = await _deviceInfo.iosInfo;
         return info.identifierForVendor ?? '';
       }
-    } catch (_) {
-      // Return empty string on failure — backend accepts it
-    }
+    } catch (_) {}
     return '';
+  }
+
+  Future<String> _getDeviceInfo() async {
+    try {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final info = await _deviceInfo.androidInfo;
+        return jsonEncode({
+          'platform': 'android',
+          'brand': info.brand,
+          'model': info.model,
+          'version': info.version.release,
+        });
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final info = await _deviceInfo.iosInfo;
+        return jsonEncode({
+          'platform': 'ios',
+          'model': info.model,
+          'system': info.systemVersion,
+        });
+      }
+    } catch (_) {}
+    return jsonEncode({'platform': Platform.operatingSystem});
+  }
+
+  String _computeFingerprint(String deviceId, String deviceInfo) {
+    final digest = sha256.convert(utf8.encode('$deviceId|$deviceInfo'));
+    return digest.toString();
   }
 }

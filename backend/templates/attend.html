@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Marquer la présence — PrésenceQR</title>
+        <link rel="stylesheet" href="/dashboard.css" />
+        <style>
+            .attend-page {
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.5rem;
+                background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+            }
+            .attend-card {
+                width: 100%;
+                max-width: 480px;
+                background: var(--surface, #fff);
+                border-radius: 16px;
+                padding: 2rem;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+            .attend-card h1 {
+                margin: 0 0 0.5rem;
+                font-size: 1.4rem;
+            }
+            .session-info {
+                background: #f0f7ff;
+                border-radius: 10px;
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+                font-size: 0.9rem;
+            }
+            .session-info p {
+                margin: 0.25rem 0;
+            }
+            .status-banner {
+                padding: 0.75rem 1rem;
+                border-radius: 10px;
+                margin-bottom: 1rem;
+                font-size: 0.9rem;
+            }
+            .status-banner.error {
+                background: #fef2f2;
+                color: #b91c1c;
+                border: 1px solid #fecaca;
+            }
+            .status-banner.success {
+                background: #f0fdf4;
+                color: #15803d;
+                border: 1px solid #bbf7d0;
+            }
+            .status-banner.info {
+                background: #eff6ff;
+                color: #1d4ed8;
+                border: 1px solid #bfdbfe;
+            }
+            .field {
+                margin-bottom: 1rem;
+            }
+            .field label {
+                display: block;
+                font-size: 0.85rem;
+                font-weight: 600;
+                margin-bottom: 0.35rem;
+            }
+            .field input {
+                width: 100%;
+                padding: 0.65rem 0.85rem;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                font-size: 1rem;
+                box-sizing: border-box;
+            }
+            .meta-info {
+                font-size: 0.75rem;
+                color: #6b7280;
+                margin-top: 1rem;
+            }
+            .app-link-hint {
+                text-align: center;
+                margin-top: 1rem;
+                font-size: 0.85rem;
+                color: #6b7280;
+            }
+            .app-link-hint a {
+                color: #2563eb;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="attend-page">
+            <div class="attend-card">
+                <h1>📋 Marquer la présence</h1>
+                <p style="color: #6b7280; margin-bottom: 1rem">
+                    Remplissez le formulaire ci-dessous ou ouvrez l'application mobile.
+                </p>
+
+                <div id="statusBanner" class="status-banner info" style="display: none"></div>
+
+                <div id="sessionInfo" class="session-info" style="display: none">
+                    <p><strong id="sessionSubject">—</strong></p>
+                    <p>🏫 <span id="sessionClasse">—</span></p>
+                    <p>👨‍🏫 <span id="sessionTeacher">—</span></p>
+                    <p>📅 <span id="sessionDate">—</span></p>
+                </div>
+
+                <form id="attendForm" style="display: none">
+                    <div class="field">
+                        <label for="firstName">Prénom</label>
+                        <input type="text" id="firstName" required autocomplete="given-name" />
+                    </div>
+                    <div class="field">
+                        <label for="lastName">Nom</label>
+                        <input type="text" id="lastName" required autocomplete="family-name" />
+                    </div>
+                    <div class="field">
+                        <label for="codeMassar">Code Massar</label>
+                        <input type="text" id="codeMassar" required autocomplete="off" />
+                    </div>
+                    <button type="submit" class="btn" id="submitBtn" style="width: 100%">
+                        ✅ Valider la présence
+                    </button>
+                </form>
+
+                <div class="meta-info" id="metaInfo"></div>
+
+                <div class="app-link-hint">
+                    Vous avez l'application ?
+                    <a href="#" id="openAppLink">Ouvrir dans PrésenceQR</a>
+                </div>
+            </div>
+        </div>
+
+        <script src="/api.js"></script>
+        <script>
+            const APP_SCHEME = "presenceqr";
+            const params = new URLSearchParams(window.location.search);
+            const qrToken = params.get("token") || "";
+
+            let deviceFingerprint = "";
+            let deviceInfo = "";
+            let latitude = null;
+            let longitude = null;
+            let publicIp = "";
+
+            function showBanner(message, type) {
+                const el = document.getElementById("statusBanner");
+                el.textContent = message;
+                el.className = `status-banner ${type}`;
+                el.style.display = "block";
+            }
+
+            function getOrCreateDeviceId() {
+                const key = "presenceqr_device_id";
+                let id = localStorage.getItem(key);
+                if (!id) {
+                    id = crypto.randomUUID();
+                    localStorage.setItem(key, id);
+                }
+                return id;
+            }
+
+            function buildDeviceFingerprint() {
+                const parts = [
+                    navigator.userAgent,
+                    navigator.language,
+                    screen.width,
+                    screen.height,
+                    screen.colorDepth,
+                    Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    getOrCreateDeviceId(),
+                ];
+                const raw = parts.join("|");
+                let hash = 0;
+                for (let i = 0; i < raw.length; i++) {
+                    hash = (hash << 5) - hash + raw.charCodeAt(i);
+                    hash |= 0;
+                }
+                return "web_" + Math.abs(hash).toString(16);
+            }
+
+            function buildDeviceInfo() {
+                return JSON.stringify({
+                    browser: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    device_id: getOrCreateDeviceId(),
+                });
+            }
+
+            async function fetchPublicIp() {
+                try {
+                    const res = await fetch("https://api.ipify.org?format=json");
+                    const data = await res.json();
+                    publicIp = data.ip || "";
+                } catch (_) {}
+            }
+
+            function captureLocation() {
+                return new Promise((resolve) => {
+                    if (!navigator.geolocation) {
+                        resolve(false);
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            latitude = pos.coords.latitude;
+                            longitude = pos.coords.longitude;
+                            resolve(true);
+                        },
+                        () => resolve(false),
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+                    );
+                });
+            }
+
+            function tryOpenApp() {
+                if (!qrToken) return;
+                const deepLink = `${APP_SCHEME}://attend?token=${encodeURIComponent(qrToken)}`;
+                document.getElementById("openAppLink").href = deepLink;
+
+                const iframe = document.createElement("iframe");
+                iframe.style.display = "none";
+                iframe.src = deepLink;
+                document.body.appendChild(iframe);
+                setTimeout(() => iframe.remove(), 1500);
+            }
+
+            async function loadSessionInfo() {
+                if (!qrToken) {
+                    showBanner("Code QR manquant dans l'URL.", "error");
+                    return;
+                }
+
+                try {
+                    const res = await fetch(
+                        `/api/v1/attendance/qr-info/?token=${encodeURIComponent(qrToken)}`,
+                    );
+                    const data = await res.json();
+
+                    if (!res.ok || !data.valid) {
+                        showBanner(
+                            data.error ||
+                                (data.expired
+                                    ? "Ce code QR a expiré."
+                                    : "Code QR invalide ou séance inactive."),
+                            "error",
+                        );
+                        return;
+                    }
+
+                    document.getElementById("sessionInfo").style.display = "block";
+                    document.getElementById("sessionSubject").textContent = data.subject;
+                    document.getElementById("sessionClasse").textContent = data.classe;
+                    document.getElementById("sessionTeacher").textContent = data.teacher;
+                    document.getElementById("sessionDate").textContent = data.date;
+
+                    document.getElementById("attendForm").style.display = "block";
+
+                    if (data.requires_location) {
+                        showBanner(
+                            "La localisation GPS est requise pour valider la présence.",
+                            "info",
+                        );
+                    }
+                } catch (e) {
+                    showBanner("Impossible de vérifier le code QR.", "error");
+                }
+            }
+
+            document.getElementById("attendForm").addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById("submitBtn");
+                btn.disabled = true;
+                btn.textContent = "⏳ Validation…";
+
+                await captureLocation();
+
+                try {
+                    const res = await fetch("/api/v1/attendance/validate/", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            qr_token: qrToken,
+                            first_name: document.getElementById("firstName").value.trim(),
+                            last_name: document.getElementById("lastName").value.trim(),
+                            code_massar: document.getElementById("codeMassar").value.trim(),
+                            device_id: getOrCreateDeviceId(),
+                            device_fingerprint: deviceFingerprint,
+                            device_info: deviceInfo,
+                            latitude: latitude,
+                            longitude: longitude,
+                        }),
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        showBanner("✅ Présence enregistrée avec succès !", "success");
+                        document.getElementById("attendForm").style.display = "none";
+                    } else {
+                        showBanner(data.error || "Échec de la validation.", "error");
+                        btn.disabled = false;
+                        btn.textContent = "✅ Valider la présence";
+                    }
+                } catch (err) {
+                    showBanner("Erreur réseau. Réessayez.", "error");
+                    btn.disabled = false;
+                    btn.textContent = "✅ Valider la présence";
+                }
+            });
+
+            (async function init() {
+                deviceFingerprint = buildDeviceFingerprint();
+                deviceInfo = buildDeviceInfo();
+                await fetchPublicIp();
+                document.getElementById("metaInfo").textContent =
+                    `IP: ${publicIp || "—"} · Empreinte: ${deviceFingerprint.substring(0, 12)}…`;
+
+                tryOpenApp();
+                await loadSessionInfo();
+            })();
+        </script>
+    </body>
+</html>

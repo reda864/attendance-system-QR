@@ -21,7 +21,15 @@ class Session(models.Model):
     )
     date = models.DateField()
     qr_token = models.CharField(max_length=64, unique=True, blank=True, null=True)
+    qr_session_id = models.CharField(max_length=64, blank=True, default="")
     qr_expires_at = models.DateTimeField(null=True, blank=True)
+    attendance_radius_meters = models.PositiveIntegerField(default=50)
+    location_latitude = models.DecimalField(
+        max_digits=10, decimal_places=7, null=True, blank=True
+    )
+    location_longitude = models.DecimalField(
+        max_digits=10, decimal_places=7, null=True, blank=True
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -32,14 +40,36 @@ class Session(models.Model):
     def __str__(self):
         return f"{self.subject} — {self.classe} ({self.date})"
 
-    def generate_qr_token(self, expiry_minutes=20):
+    def generate_qr_token(
+        self,
+        expiry_minutes=20,
+        attendance_radius_meters=50,
+        latitude=None,
+        longitude=None,
+    ):
         from django.conf import settings
 
         self.qr_token = secrets.token_urlsafe(32)
-        self.qr_expires_at = timezone.now() + timezone.timedelta(
-            minutes=getattr(settings, "QR_TOKEN_DEFAULT_EXPIRY_MINUTES", expiry_minutes)
+        self.qr_session_id = secrets.token_urlsafe(16)
+        minutes = expiry_minutes or getattr(
+            settings, "QR_TOKEN_DEFAULT_EXPIRY_MINUTES", 20
         )
-        self.save(update_fields=["qr_token", "qr_expires_at"])
+        self.qr_expires_at = timezone.now() + timezone.timedelta(minutes=minutes)
+        self.attendance_radius_meters = attendance_radius_meters
+        if latitude is not None:
+            self.location_latitude = latitude
+        if longitude is not None:
+            self.location_longitude = longitude
+        self.save(
+            update_fields=[
+                "qr_token",
+                "qr_session_id",
+                "qr_expires_at",
+                "attendance_radius_meters",
+                "location_latitude",
+                "location_longitude",
+            ]
+        )
 
     @property
     def is_qr_valid(self):

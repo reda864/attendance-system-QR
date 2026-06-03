@@ -3,6 +3,7 @@ import logging
 from io import BytesIO
 
 import qrcode
+from django.conf import settings
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -68,8 +69,21 @@ class SessionViewSet(viewsets.ModelViewSet):
         ser = GenerateQRSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         expiry = ser.validated_data["expiry_minutes"]
+        radius = ser.validated_data["attendance_radius_meters"]
+        latitude = ser.validated_data.get("latitude")
+        longitude = ser.validated_data.get("longitude")
 
-        session.generate_qr_token(expiry_minutes=expiry)
+        session.generate_qr_token(
+            expiry_minutes=expiry,
+            attendance_radius_meters=radius,
+            latitude=latitude,
+            longitude=longitude,
+        )
+
+        site_base = getattr(settings, "SITE_BASE_URL", "http://localhost:8000").rstrip(
+            "/"
+        )
+        qr_url = f"{site_base}/attend/?token={session.qr_token}"
 
         qr = qrcode.QRCode(
             version=1,
@@ -77,7 +91,7 @@ class SessionViewSet(viewsets.ModelViewSet):
             box_size=10,
             border=4,
         )
-        qr.add_data(session.qr_token)
+        qr.add_data(qr_url)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
         buffer = BytesIO()
@@ -93,7 +107,12 @@ class SessionViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "qr_token": session.qr_token,
+                "qr_session_id": session.qr_session_id,
                 "qr_expires_at": session.qr_expires_at,
+                "qr_url": qr_url,
+                "attendance_radius_meters": session.attendance_radius_meters,
+                "location_latitude": session.location_latitude,
+                "location_longitude": session.location_longitude,
                 "qr_image_base64": f"data:image/png;base64,{b64}",
             },
             status=status.HTTP_200_OK,

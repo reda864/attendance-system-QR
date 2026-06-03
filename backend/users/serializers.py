@@ -30,6 +30,7 @@ class LoginSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    student_profile = serializers.SerializerMethodField()
     assigned_class_ids = serializers.PrimaryKeyRelatedField(
         source="assigned_classes",
         many=True,
@@ -48,12 +49,29 @@ class UserSerializer(serializers.ModelSerializer):
             "role",
             "is_active",
             "assigned_class_ids",
+            "student_profile",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
 
     def get_full_name(self, obj):
         return obj.full_name
+
+    def get_student_profile(self, obj):
+        if obj.role != "student":
+            return None
+        try:
+            profile = obj.student_profile
+        except Student.DoesNotExist:
+            return None
+        return {
+            "id": profile.id,
+            "first_name": profile.first_name,
+            "last_name": profile.last_name,
+            "code_massar": profile.code_massar,
+            "classe_id": profile.classe_id,
+            "classe_name": profile.classe.name,
+        }
 
     def validate_assigned_class_ids(self, value):
         if self.instance and self.instance.role != "teacher" and value:

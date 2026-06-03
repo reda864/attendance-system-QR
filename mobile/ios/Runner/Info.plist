@@ -25,9 +25,23 @@
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.attendance.presenceqr</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>presenceqr</string>
+			</array>
+		</dict>
+	</array>
+
 	<!-- ── Camera Permission ─────────────────────────────────────────────── -->
 	<key>NSCameraUsageDescription</key>
 	<string>AttendQR needs camera access to scan the teacher's QR code for attendance registration.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AttendQR needs your location to verify you are in the classroom during attendance.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>AttendQR may access your photo library to scan QR codes from images.</string>
 

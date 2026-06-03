@@ -5,6 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Tableau de bord enseignant — PrésenceQR</title>
         <link rel="stylesheet" href="/dashboard.css" />
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     </head>
     <body class="dashboard-app teacher-app">
         <!-- NAV -->
@@ -75,6 +80,44 @@
                     <button class="btn" id="btnConfirmNewSession">
                         Create Session
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── MODAL: QR Generation Settings ── -->
+        <div class="modal-backdrop" id="modalGenQR">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>🔲 Générer le QR Code</h3>
+                    <button class="modal-close" data-close="modalGenQR">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="field">
+                        <label>Durée de validité (minutes)</label>
+                        <input type="number" id="qrExpiryMinutes" value="20" min="1" max="120" />
+                    </div>
+                    <div class="field">
+                        <label>Rayon de présence (mètres)</label>
+                        <select id="qrRadius">
+                            <option value="20">20 m</option>
+                            <option value="50" selected>50 m</option>
+                            <option value="100">100 m</option>
+                            <option value="200">200 m</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Localisation de la salle</label>
+                        <button type="button" class="btn outline sm" id="btnCaptureLocation">
+                            📍 Capturer ma position GPS
+                        </button>
+                        <p id="qrLocationStatus" style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem">
+                            Position non capturée — requise pour le géorepérage.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn outline" data-close="modalGenQR">Annuler</button>
+                    <button class="btn green" id="btnConfirmGenQR">Générer</button>
                 </div>
             </div>
         </div>
@@ -169,6 +212,11 @@
             let teacherLiveWS = null;
             let attendanceRows = []; // for the current session
             let liveAttendanceRows = []; // all courses live feed
+            let lastQrData = null;
+            let qrGenLatitude = null;
+            let qrGenLongitude = null;
+            let sessionMap = null;
+            let pendingQrSessionId = null;
 
             /* ═══════════════════════════════════════════════════════════
    INIT
@@ -582,6 +630,15 @@
     <!-- QR area (hidden until generated) -->
     <div id="qrArea" style="display:none"></div>
 
+    <!-- Attendance tabs -->
+    <div class="tab-bar" style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+      <button class="btn sm" id="tabAttendance" onclick="switchSessionTab('attendance')">📋 Présences</button>
+      <button class="btn sm outline" id="tabMap" onclick="switchSessionTab('map')">🗺️ Carte</button>
+      <button class="btn sm outline" id="tabStats" onclick="switchSessionTab('stats')">📊 Statistiques</button>
+      <button class="btn sm outline" id="tabSuspicious" onclick="switchSessionTab('suspicious')">⚠️ Tentatives suspectes</button>
+    </div>
+
+    <div id="tabPanelAttendance">
     <!-- Attendance Table -->
     <div class="attendance-section">
       <div class="attendance-section-header">
@@ -602,11 +659,40 @@
             <th>Code Massar</th>
             <th>Filière</th>
             <th>Scanné à</th>
+            <th>Appareil</th>
             <th>Statut</th>
           </tr>
         </thead>
         <tbody id="attendanceBody">
-          <tr class="empty-row"><td colspan="6">Loading attendance…</td></tr>
+          <tr class="empty-row"><td colspan="7">Loading attendance…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
+
+    <div id="tabPanelMap" style="display:none">
+      <div id="sessionMap" style="height:420px;border-radius:12px;border:1px solid var(--border)"></div>
+      <p style="font-size:.8rem;color:var(--muted);margin-top:.5rem">Emplacements GPS des étudiants ayant marqué la présence.</p>
+    </div>
+
+    <div id="tabPanelStats" style="display:none">
+      <div id="statsContent" class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem"></div>
+    </div>
+
+    <div id="tabPanelSuspicious" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Étudiant</th>
+            <th>IP</th>
+            <th>Appareil</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody id="suspiciousBody">
+          <tr class="empty-row"><td colspan="6">Chargement…</td></tr>
         </tbody>
       </table>
     </div>
@@ -614,16 +700,150 @@
 
                 document
                     .getElementById("btnGenQR")
-                    .addEventListener("click", () => generateQR(session.id));
+                    .addEventListener("click", () => openGenQRModal(session.id));
                 document
                     .getElementById("btnExport")
                     .addEventListener("click", () => exportExcel(session.id));
             }
 
+            function openGenQRModal(sessionId) {
+                pendingQrSessionId = sessionId;
+                qrGenLatitude = null;
+                qrGenLongitude = null;
+                document.getElementById("qrLocationStatus").textContent =
+                    "Position non capturée — requise pour le géorepérage.";
+                openModal("modalGenQR");
+            }
+
+            document.getElementById("btnCaptureLocation").addEventListener("click", () => {
+                if (!navigator.geolocation) {
+                    showToast("GPS non disponible sur cet appareil.", "error");
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        qrGenLatitude = pos.coords.latitude;
+                        qrGenLongitude = pos.coords.longitude;
+                        document.getElementById("qrLocationStatus").textContent =
+                            `✅ Position capturée (${qrGenLatitude.toFixed(5)}, ${qrGenLongitude.toFixed(5)})`;
+                    },
+                    () => showToast("Impossible d'obtenir la position GPS.", "error"),
+                    { enableHighAccuracy: true, timeout: 15000 },
+                );
+            });
+
+            document.getElementById("btnConfirmGenQR").addEventListener("click", async () => {
+                if (!pendingQrSessionId) return;
+                if (qrGenLatitude === null || qrGenLongitude === null) {
+                    showToast("Capturez d'abord la position GPS de la salle.", "error");
+                    return;
+                }
+                closeModal("modalGenQR");
+                await generateQR(pendingQrSessionId);
+            });
+
+            function switchSessionTab(tab) {
+                const tabs = ["attendance", "map", "stats", "suspicious"];
+                tabs.forEach((t) => {
+                    const panel = document.getElementById(`tabPanel${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                    const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                    if (panel) panel.style.display = t === tab ? "block" : "none";
+                    if (btn) btn.className = t === tab ? "btn sm" : "btn sm outline";
+                });
+                if (tab === "map" && activeSessionId) loadSessionMap(activeSessionId);
+                if (tab === "stats" && activeSessionId) loadSessionStats(activeSessionId);
+                if (tab === "suspicious" && activeSessionId) loadSuspiciousAttempts(activeSessionId);
+            }
+
+            async function loadSessionMap(sessionId) {
+                try {
+                    const data = await API.apiFetch(`/attendance/session/${sessionId}/stats/`);
+                    const container = document.getElementById("sessionMap");
+                    if (!container) return;
+                    if (sessionMap) {
+                        sessionMap.remove();
+                        sessionMap = null;
+                    }
+                    const center = data.locations?.length
+                        ? [parseFloat(data.locations[0].latitude), parseFloat(data.locations[0].longitude)]
+                        : [33.5731, -7.5898];
+                    sessionMap = L.map(container).setView(center, 17);
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        attribution: "© OpenStreetMap",
+                    }).addTo(sessionMap);
+                    (data.locations || []).forEach((loc) => {
+                        if (loc.latitude && loc.longitude) {
+                            L.marker([parseFloat(loc.latitude), parseFloat(loc.longitude)])
+                                .addTo(sessionMap)
+                                .bindPopup(`${loc.student_name}<br>${loc.code_massar}`);
+                        }
+                    });
+                    setTimeout(() => sessionMap.invalidateSize(), 200);
+                } catch (e) {
+                    showToast(`Carte: ${e.message}`, "error");
+                }
+            }
+
+            async function loadSessionStats(sessionId) {
+                try {
+                    const data = await API.apiFetch(`/attendance/session/${sessionId}/stats/`);
+                    const el = document.getElementById("statsContent");
+                    if (!el) return;
+                    el.innerHTML = `
+      <div class="stat-card" style="background:var(--surface-2);padding:1rem;border-radius:10px;text-align:center">
+        <div style="font-size:1.8rem;font-weight:700">${data.attendance_count}</div>
+        <div style="font-size:.8rem;color:var(--muted)">Présences</div>
+      </div>
+      <div class="stat-card" style="background:var(--surface-2);padding:1rem;border-radius:10px;text-align:center">
+        <div style="font-size:1.8rem;font-weight:700">${data.attendance_rate}%</div>
+        <div style="font-size:.8rem;color:var(--muted)">Taux</div>
+      </div>
+      <div class="stat-card" style="background:var(--surface-2);padding:1rem;border-radius:10px;text-align:center">
+        <div style="font-size:1.8rem;font-weight:700">${data.unique_devices}</div>
+        <div style="font-size:.8rem;color:var(--muted)">Appareils</div>
+      </div>
+      <div class="stat-card" style="background:var(--surface-2);padding:1rem;border-radius:10px;text-align:center">
+        <div style="font-size:1.8rem;font-weight:700;color:var(--danger)">${data.duplicate_attempts}</div>
+        <div style="font-size:.8rem;color:var(--muted)">Doublons bloqués</div>
+      </div>
+      <div class="stat-card" style="background:var(--surface-2);padding:1rem;border-radius:10px;text-align:center">
+        <div style="font-size:1.8rem;font-weight:700;color:var(--warning)">${data.geofence_violations}</div>
+        <div style="font-size:.8rem;color:var(--muted)">Hors zone</div>
+      </div>
+    `;
+                } catch (e) {
+                    showToast(`Stats: ${e.message}`, "error");
+                }
+            }
+
+            async function loadSuspiciousAttempts(sessionId) {
+                const tbody = document.getElementById("suspiciousBody");
+                if (!tbody) return;
+                try {
+                    const data = await API.apiFetch(`/attendance/session/${sessionId}/suspicious/`);
+                    const rows = Array.isArray(data) ? data : data.results || [];
+                    if (!rows.length) {
+                        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Aucune tentative suspecte.</td></tr>`;
+                        return;
+                    }
+                    tbody.innerHTML = rows.map((r) => `
+      <tr>
+        <td style="font-size:.8rem">${formatDateTime(r.created_at)}</td>
+        <td><span class="badge badge-absent">${esc(r.attempt_type)}</span></td>
+        <td>${esc(r.first_name)} ${esc(r.last_name)}<br><small>${esc(r.code_massar)}</small></td>
+        <td style="font-family:monospace;font-size:.8rem">${esc(r.ip_address || "—")}</td>
+        <td style="font-size:.75rem">${esc((r.device_fingerprint || r.device_id || "—").substring(0, 12))}…</td>
+        <td style="font-size:.8rem">${esc(r.error_message)}</td>
+      </tr>
+    `).join("");
+                } catch (e) {
+                    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${e.message}</td></tr>`;
+                }
+            }
+
             /* ═══════════════════════════════════════════════════════════
    QR CODE
 ═══════════════════════════════════════════════════════════ */
-            let lastQrData = null; // stores the last generated QR payload
 
             async function generateQR(sessionId) {
                 const btn = document.getElementById("btnGenQR");
@@ -633,11 +853,24 @@
                 }
 
                 try {
+                    const expiry = parseInt(
+                        document.getElementById("qrExpiryMinutes")?.value || "20",
+                        10,
+                    );
+                    const radius = parseInt(
+                        document.getElementById("qrRadius")?.value || "50",
+                        10,
+                    );
                     const data = await API.apiFetch(
                         `/sessions/${sessionId}/generate-qr/`,
                         {
                             method: "POST",
-                            body: JSON.stringify({ expiry_minutes: 20 }),
+                            body: JSON.stringify({
+                                expiry_minutes: expiry,
+                                attendance_radius_meters: radius,
+                                latitude: qrGenLatitude,
+                                longitude: qrGenLongitude,
+                            }),
                         },
                     );
 
@@ -650,7 +883,7 @@
                     // Open modal
                     openQRModal(data);
 
-                    showToast("QR code generated! (20 min)", "success");
+                    showToast(`QR généré (${expiry} min, rayon ${radius}m)`, "success");
                 } catch (e) {
                     showToast(`QR Error: ${e.message}`, "error");
                 } finally {
@@ -815,8 +1048,8 @@
                     countEl.textContent = `${rows.length} student${rows.length !== 1 ? "s" : ""}`;
 
                 if (!rows.length) {
-                    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">
-      No attendance recorded yet. Generate a QR code and wait for students to scan.
+                    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">
+      Aucune présence enregistrée. Générez un QR code et attendez que les étudiants scannent.
     </td></tr>`;
                     return;
                 }
@@ -830,7 +1063,8 @@
       <td style="font-family:monospace;color:var(--accent)">${esc(r.student_code_massar || "—")}</td>
       <td style="color:var(--muted)">${esc(r.classe_name || "—")}</td>
       <td style="color:var(--muted);font-size:.8rem">${formatDateTime(r.validation_time)}</td>
-      <td><span class="badge badge-present">Present</span></td>
+      <td style="font-size:.75rem;font-family:monospace">${esc((r.device_fingerprint || r.device_id || "—").substring(0, 10))}</td>
+      <td><span class="badge badge-present">${esc(r.attendance_status || "confirmed")}</span></td>
     </tr>
   `,
                     )
@@ -862,9 +1096,10 @@
     <td style="color:var(--muted)">${idx}</td>
     <td><strong>${esc(record.student_name || "—")}</strong></td>
     <td style="font-family:monospace;color:var(--accent)">${esc(record.student_code_massar || "—")}</td>
-    <td style="color:var(--muted)">${esc(record.student_field || "—")}</td>
+    <td style="color:var(--muted)">${esc(record.classe_name || record.classe_session || "—")}</td>
     <td style="color:var(--muted);font-size:.8rem">${formatDateTime(record.validation_time)}</td>
-    <td><span class="badge badge-present">Present</span></td>
+    <td style="font-size:.75rem;font-family:monospace">${esc((record.device_fingerprint || record.device_id || "—").substring(0, 10))}</td>
+    <td><span class="badge badge-present">${esc(record.attendance_status || "confirmed")}</span></td>
   `;
                 tbody.prepend(tr); // newest on top
 

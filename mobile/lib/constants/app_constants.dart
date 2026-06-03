@@ -38,7 +38,9 @@ class AppConstants {
   static const String refreshEndpoint = '/auth/refresh/';
   static const String meEndpoint = '/auth/me/';
   static const String validateAttendanceEndpoint = '/attendance/validate/';
+  static const String validateAppAttendanceEndpoint = '/attendance/validate/app/';
   static const String myAttendanceEndpoint = '/attendance/my/';
+  static const String appDeepLinkScheme = 'presenceqr';
 
   // ─── SharedPreferences keys ───────────────────────────────────────────────
   static const String accessTokenKey = 'access_token';
