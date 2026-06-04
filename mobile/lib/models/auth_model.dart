@@ -1,3 +1,4 @@
+import '../l10n/app_strings.dart';
 import 'user_model.dart';
 
 // ─── Auth Response ─────────────────────────────────────────────────────────
@@ -26,10 +27,6 @@ class AuthResponse {
         'refresh': refresh,
         'user': user.toJson(),
       };
-
-  @override
-  String toString() =>
-      'AuthResponse(access: [hidden], refresh: [hidden], user: $user)';
 }
 
 // ─── Token Refresh Response ────────────────────────────────────────────────
@@ -64,19 +61,6 @@ class ValidateAttendanceRequest {
     this.deviceFingerprint = '',
     this.deviceInfo = '',
   });
-
-  Map<String, dynamic> toJson() => {
-        'qr_token': qrToken,
-        'first_name': firstName,
-        'last_name': lastName,
-        'code_massar': codeMassar,
-        'device_id': deviceId,
-      };
-
-  @override
-  String toString() =>
-      'ValidateAttendanceRequest(qrToken: $qrToken, '
-      'name: $firstName $lastName, codeMassar: $codeMassar)';
 }
 
 // ─── Validate Attendance Result ────────────────────────────────────────────
@@ -97,56 +81,57 @@ extension AttendanceErrorTypeX on AttendanceErrorType {
   String get displayTitle {
     switch (this) {
       case AttendanceErrorType.expired:
-        return 'QR Code Expired';
+        return 'Code QR expiré';
       case AttendanceErrorType.alreadyValidated:
-        return 'Already Registered';
+        return 'Déjà enregistré';
       case AttendanceErrorType.invalidQr:
-        return 'Invalid QR Code';
+        return 'Code QR invalide';
       case AttendanceErrorType.sessionClosed:
-        return 'Session Closed';
+        return 'Séance fermée';
       case AttendanceErrorType.studentNotFound:
-        return 'Student Not Found';
+        return 'Étudiant introuvable';
       case AttendanceErrorType.nameMismatch:
-        return 'Name Mismatch';
+        return 'Nom incorrect';
       case AttendanceErrorType.noInternet:
-        return 'No Connection';
+        return 'Pas de connexion';
       case AttendanceErrorType.timeout:
-        return 'Request Timed Out';
+        return 'Délai dépassé';
       case AttendanceErrorType.unknown:
-        return 'Error Occurred';
+        return AppStrings.errorOccurred;
     }
   }
 
   String get displayMessage {
     switch (this) {
       case AttendanceErrorType.expired:
-        return 'This QR code has expired. Please ask your teacher to generate a new one.';
+        return 'Ce code QR a expiré. Demandez à votre enseignant d\'en générer un nouveau.';
       case AttendanceErrorType.alreadyValidated:
-        return 'Your attendance has already been recorded for this session.';
+        return 'Votre présence est déjà enregistrée pour cette séance.';
       case AttendanceErrorType.invalidQr:
-        return 'The QR code is invalid. Please scan the correct teacher QR code.';
+        return 'Code QR invalide. Scannez le code affiché par votre enseignant.';
       case AttendanceErrorType.sessionClosed:
-        return 'This session is no longer active. Attendance registration is closed.';
+        return 'Cette séance n\'est plus active. L\'enregistrement est fermé.';
       case AttendanceErrorType.studentNotFound:
-        return 'Your Code Massar was not found in the system. Please contact your teacher.';
+        return 'Code Massar introuvable. Contactez votre enseignant.';
       case AttendanceErrorType.nameMismatch:
-        return 'The name you entered does not match our records. Please verify your information.';
+        return 'Le nom saisi ne correspond pas aux registres. Vérifiez vos informations.';
       case AttendanceErrorType.noInternet:
-        return 'No internet connection detected. Please check your network and try again.';
+        return AppStrings.noInternet;
       case AttendanceErrorType.timeout:
-        return 'The request timed out. Please check your connection and try again.';
+        return AppStrings.requestTimeout;
       case AttendanceErrorType.unknown:
-        return 'An unexpected error occurred. Please try again.';
+        return AppStrings.unexpectedError;
     }
   }
 
-  /// Maps a raw error string from the Django backend to a typed error.
   static AttendanceErrorType fromBackendMessage(String message) {
     final lower = message.toLowerCase();
     if (lower.contains('expired') || lower.contains('expiré')) {
       return AttendanceErrorType.expired;
     }
-    if (lower.contains('already') || lower.contains('déjà')) {
+    if (lower.contains('already') ||
+        lower.contains('déjà') ||
+        lower.contains('duplicate')) {
       return AttendanceErrorType.alreadyValidated;
     }
     if (lower.contains('invalid qr') ||
@@ -167,7 +152,9 @@ extension AttendanceErrorTypeX on AttendanceErrorType {
         lower.contains('ne correspond pas')) {
       return AttendanceErrorType.nameMismatch;
     }
-    if (lower.contains('zone') || lower.contains('localisation')) {
+    if (lower.contains('zone') ||
+        lower.contains('localisation') ||
+        lower.contains('gps')) {
       return AttendanceErrorType.unknown;
     }
     return AttendanceErrorType.unknown;
@@ -205,17 +192,12 @@ class AttendanceResult {
     );
   }
 
-  String get errorTitle => errorType?.displayTitle ?? 'Error';
+  String get errorTitle => errorType?.displayTitle ?? AppStrings.errorOccurred;
   String get errorMessage {
     final raw = rawErrorMessage?.trim();
     if (raw != null && raw.isNotEmpty) return raw;
-    return errorType?.displayMessage ?? 'An error occurred.';
+    return errorType?.displayMessage ?? AppStrings.unexpectedError;
   }
-
-  @override
-  String toString() => success
-      ? 'AttendanceResult.success(payload: $payload)'
-      : 'AttendanceResult.failure(type: $errorType, msg: $rawErrorMessage)';
 }
 
 // ─── Attendance Success Payload ────────────────────────────────────────────
@@ -255,19 +237,9 @@ class AttendanceSuccessPayload {
       final parsed = int.tryParse(value);
       if (parsed != null) return parsed;
     }
-    throw FormatException('Invalid $field in attendance response: $value');
+    throw FormatException('Champ $field invalide dans la réponse : $value');
   }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'student': student,
-        'session': session,
-        'validation_time': validationTime,
-        'ip_address': ipAddress,
-        'device_id': deviceId,
-      };
-
-  /// Returns the validation time parsed to local [DateTime], or null.
   DateTime? get validationDateTime {
     try {
       return DateTime.parse(validationTime).toLocal();
@@ -276,7 +248,6 @@ class AttendanceSuccessPayload {
     }
   }
 
-  /// A human-readable formatted validation time string.
   String get formattedValidationTime {
     final dt = validationDateTime;
     if (dt == null) return validationTime;
@@ -284,9 +255,4 @@ class AttendanceSuccessPayload {
     return '${dt.year}-${pad(dt.month)}-${pad(dt.day)}  '
         '${pad(dt.hour)}:${pad(dt.minute)}:${pad(dt.second)}';
   }
-
-  @override
-  String toString() =>
-      'AttendanceSuccessPayload(id: $id, session: $session, '
-      'validationTime: $validationTime)';
 }

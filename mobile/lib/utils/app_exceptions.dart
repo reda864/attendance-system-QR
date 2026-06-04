@@ -1,117 +1,58 @@
-// ─── Base Exception ────────────────────────────────────────────────────────
-
 class AppException implements Exception {
   final String message;
-  final int? statusCode;
-
-  const AppException(this.message, {this.statusCode});
+  const AppException(this.message);
 
   @override
-  String toString() => 'AppException: $message (status: $statusCode)';
+  String toString() => message;
 }
-
-// ─── Network ───────────────────────────────────────────────────────────────
 
 class NetworkException extends AppException {
   const NetworkException([
-    String message = 'No internet connection. Please check your network.',
-  ]) : super(message);
-
-  @override
-  String toString() => 'NetworkException: $message';
+    super.message = 'Pas de connexion Internet. Vérifiez votre réseau.',
+  ]);
 }
-
-// ─── Timeout ───────────────────────────────────────────────────────────────
 
 class TimeoutException extends AppException {
   const TimeoutException([
-    String message = 'Request timed out. Please try again.',
-  ]) : super(message);
-
-  @override
-  String toString() => 'TimeoutException: $message';
+    super.message = 'Délai dépassé. Réessayez.',
+  ]);
 }
-
-// ─── Authentication ────────────────────────────────────────────────────────
 
 class UnauthorizedException extends AppException {
   const UnauthorizedException([
-    String message = 'Session expired. Please login again.',
-  ]) : super(message, statusCode: 401);
-
-  @override
-  String toString() => 'UnauthorizedException: $message';
+    super.message = 'Session expirée. Reconnectez-vous.',
+  ]);
 }
-
-class ForbiddenException extends AppException {
-  const ForbiddenException([
-    String message = 'You do not have permission to perform this action.',
-  ]) : super(message, statusCode: 403);
-
-  @override
-  String toString() => 'ForbiddenException: $message';
-}
-
-// ─── Validation / Business Logic ───────────────────────────────────────────
 
 class ValidationException extends AppException {
-  const ValidationException(String message) : super(message, statusCode: 400);
-
-  @override
-  String toString() => 'ValidationException: $message';
+  const ValidationException(super.message);
 }
-
-// ─── Not Found ─────────────────────────────────────────────────────────────
 
 class NotFoundException extends AppException {
   const NotFoundException([
-    String message = 'The requested resource was not found.',
-  ]) : super(message, statusCode: 404);
-
-  @override
-  String toString() => 'NotFoundException: $message';
+    super.message = 'Ressource introuvable.',
+  ]);
 }
-
-// ─── Server ────────────────────────────────────────────────────────────────
 
 class ServerException extends AppException {
   const ServerException([
-    String message = 'A server error occurred. Please try again later.',
-  ]) : super(message, statusCode: 500);
-
-  @override
-  String toString() => 'ServerException: $message';
+    super.message = 'Erreur serveur. Réessayez plus tard.',
+  ]);
 }
 
-// ─── Unknown ───────────────────────────────────────────────────────────────
-
-class UnknownException extends AppException {
-  const UnknownException([
-    String message = 'An unexpected error occurred. Please try again.',
-  ]) : super(message);
-
-  @override
-  String toString() => 'UnknownException: $message';
-}
-
-// ─── Helper: map HTTP status to typed exception ────────────────────────────
-
-AppException exceptionFromStatusCode(int statusCode, [String? message]) {
+AppException exceptionFromStatusCode(int statusCode, [String? fallback]) {
+  final msg = fallback ?? 'Une erreur est survenue';
   switch (statusCode) {
     case 400:
-      return ValidationException(message ?? 'Bad request.');
+    case 422:
+      return ValidationException(msg);
     case 401:
-      return UnauthorizedException(message ?? 'Unauthorized.');
-    case 403:
-      return ForbiddenException(message ?? 'Forbidden.');
+      return UnauthorizedException(msg);
     case 404:
-      return NotFoundException(message ?? 'Not found.');
+      return NotFoundException(msg);
     case >= 500:
-      return ServerException(message ?? 'Server error ($statusCode).');
+      return ServerException(msg);
     default:
-      return AppException(
-        message ?? 'Unexpected error (status $statusCode).',
-        statusCode: statusCode,
-      );
+      return AppException(msg);
   }
 }

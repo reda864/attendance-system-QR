@@ -221,7 +221,7 @@ class AttendanceProvider extends ChangeNotifier {
       final isConnected = await _connectivityService.isConnected();
       if (!isConnected) {
         _historyError = true;
-        _historyErrorMessage = 'No internet connection.';
+        _historyErrorMessage = AppStrings.noInternet;
         _historyLoading = false;
         notifyListeners();
         return;

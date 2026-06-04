@@ -11,6 +11,14 @@ class SessionSerializer(serializers.ModelSerializer):
     classe_field = serializers.CharField(source="classe.field", read_only=True)
     is_qr_valid = serializers.BooleanField(read_only=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        if user and getattr(user, "is_authenticated", False) and user.role == "teacher":
+            self.fields["teacher"].required = False
+            self.fields["teacher"].read_only = True
+
     class Meta:
         model = Session
         fields = [
@@ -49,11 +57,18 @@ class SessionSerializer(serializers.ModelSerializer):
         classe = data.get("classe", getattr(self.instance, "classe", None))
         request = self.context.get("request")
         if request and request.user.role == "teacher" and classe:
-            if not request.user.assigned_classes.filter(pk=classe.pk).exists():
-                if teacher and teacher.id != request.user.id:
-                    raise serializers.ValidationError(
-                        {"classe": "Vous n'êtes pas affecté à cette classe."}
-                    )
+            assigned = request.user.assigned_classes.filter(pk=classe.pk).exists()
+            has_sessions = Session.objects.filter(
+                classe=classe, teacher=request.user
+            ).exists()
+            if not assigned and not has_sessions:
+                raise serializers.ValidationError(
+                    {"classe": "Vous n'êtes pas affecté à cette classe."}
+                )
+            if teacher and teacher.id != request.user.id:
+                raise serializers.ValidationError(
+                    {"teacher": "Vous ne pouvez pas assigner une autre enseignant."}
+                )
         return data
 
 

@@ -43,7 +43,7 @@ class AuthService {
     // Error responses are usually already thrown by DioClient interceptors,
     // but handle any edge-case here:
     final data = response.data;
-    String message = 'Login failed.';
+    String message = 'Échec de la connexion.';
     if (data is Map<String, dynamic>) {
       message = data['detail'] as String? ??
           data['error'] as String? ??
@@ -145,7 +145,7 @@ class AuthService {
 
     throw exceptionFromStatusCode(
       statusCode,
-      'Failed to fetch user profile.',
+      'Échec de la connexion.',
     );
   }
 

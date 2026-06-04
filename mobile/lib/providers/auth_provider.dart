@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/auth_model.dart';
 import '../models/user_model.dart';
+import '../l10n/app_strings.dart';
 import '../services/auth_service.dart';
 import '../utils/app_exceptions.dart';
 
@@ -82,15 +83,15 @@ class AuthProvider extends ChangeNotifier {
       _setStatus(AuthStatus.authenticated);
       return true;
     } on UnauthorizedException {
-      _errorMessage = 'Invalid email or password. Please try again.';
+      _errorMessage = 'E-mail ou mot de passe incorrect.';
       _setStatus(AuthStatus.unauthenticated);
       return false;
     } on NetworkException {
-      _errorMessage = 'No internet connection. Please check your network.';
+      _errorMessage = AppStrings.noInternet;
       _setStatus(AuthStatus.unauthenticated);
       return false;
     } on TimeoutException {
-      _errorMessage = 'Request timed out. Please try again.';
+      _errorMessage = AppStrings.requestTimeout;
       _setStatus(AuthStatus.unauthenticated);
       return false;
     } on AppException catch (e) {
@@ -98,7 +99,7 @@ class AuthProvider extends ChangeNotifier {
       _setStatus(AuthStatus.unauthenticated);
       return false;
     } catch (e) {
-      _errorMessage = 'An unexpected error occurred. Please try again.';
+      _errorMessage = AppStrings.unexpectedError;
       _setStatus(AuthStatus.unauthenticated);
       return false;
     }
