@@ -10,6 +10,8 @@ class SessionSerializer(serializers.ModelSerializer):
     classe_name = serializers.CharField(source="classe.name", read_only=True)
     classe_field = serializers.CharField(source="classe.field", read_only=True)
     is_qr_valid = serializers.BooleanField(read_only=True)
+    is_within_session_window = serializers.BooleanField(read_only=True)
+    can_generate_qr = serializers.BooleanField(read_only=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,6 +32,8 @@ class SessionSerializer(serializers.ModelSerializer):
             "classe_name",
             "classe_field",
             "date",
+            "start_time",
+            "end_time",
             "qr_token",
             "qr_session_id",
             "qr_expires_at",
@@ -38,6 +42,8 @@ class SessionSerializer(serializers.ModelSerializer):
             "location_longitude",
             "is_active",
             "is_qr_valid",
+            "is_within_session_window",
+            "can_generate_qr",
             "created_at",
         ]
         read_only_fields = [
@@ -49,10 +55,19 @@ class SessionSerializer(serializers.ModelSerializer):
             "location_latitude",
             "location_longitude",
             "is_qr_valid",
+            "is_within_session_window",
+            "can_generate_qr",
             "created_at",
         ]
 
     def validate(self, data):
+        start_time = data.get("start_time", getattr(self.instance, "start_time", None))
+        end_time = data.get("end_time", getattr(self.instance, "end_time", None))
+        if start_time and end_time and end_time <= start_time:
+            raise serializers.ValidationError(
+                {"end_time": "L'heure de fin doit être après l'heure de début."}
+            )
+
         teacher = data.get("teacher", getattr(self.instance, "teacher", None))
         classe = data.get("classe", getattr(self.instance, "classe", None))
         request = self.context.get("request")

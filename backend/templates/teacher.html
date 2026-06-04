@@ -72,6 +72,19 @@
                         <label>Date de la séance</label>
                         <input type="date" id="newSessionDate" />
                     </div>
+                    <div class="field-row" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+                        <div class="field">
+                            <label>Heure de début</label>
+                            <input type="time" id="newSessionStartTime" value="14:00" />
+                        </div>
+                        <div class="field">
+                            <label>Heure de fin</label>
+                            <input type="time" id="newSessionEndTime" value="16:00" />
+                        </div>
+                    </div>
+                    <p style="font-size:.78rem;color:var(--muted);margin:0">
+                        Le QR ne peut être généré que pendant ce créneau. Après la fin, seules les statistiques et l'export restent disponibles.
+                    </p>
                 </div>
                 <div class="modal-footer">
                     <button class="btn outline" data-close="modalNewSession">
@@ -205,6 +218,7 @@
             let sessionsByClasse = {};
             let activeClasseId = null;
             let activeSessionId = null;
+            let activeSession = null;
             let qrExpiresAt = null;
             let qrCountdownTimer = null;
             let qrModalCountdownTimer = null;
@@ -355,7 +369,7 @@
            data-session-id="${s.id}"
            data-classe-id="${classeId}">
         <div>
-          <div class="session-date">📅 ${formatDate(s.date)}</div>
+          <div class="session-date">📅 ${formatDate(s.date)} · ${formatSessionWindow(s)}</div>
           <div class="session-id">${esc(s.subject)}</div>
         </div>
       </div>
@@ -389,6 +403,8 @@
                 const today = new Date().toISOString().split("T")[0];
                 document.getElementById("newSessionDate").value = today;
                 document.getElementById("newSessionSubject").value = "";
+                document.getElementById("newSessionStartTime").value = "14:00";
+                document.getElementById("newSessionEndTime").value = "16:00";
                 openModal("modalNewSession");
             }
 
@@ -399,8 +415,16 @@
                         document.getElementById("newSessionDate").value;
                     const subject =
                         document.getElementById("newSessionSubject").value.trim();
-                    if (!date || !subject) {
-                        showToast("Matière et date obligatoires.", "error");
+                    const start_time =
+                        document.getElementById("newSessionStartTime").value;
+                    const end_time =
+                        document.getElementById("newSessionEndTime").value;
+                    if (!date || !subject || !start_time || !end_time) {
+                        showToast("Matière, date et horaires obligatoires.", "error");
+                        return;
+                    }
+                    if (end_time <= start_time) {
+                        showToast("L'heure de fin doit être après l'heure de début.", "error");
                         return;
                     }
 
@@ -411,6 +435,8 @@
                                 classe: newSessionTargetClasseId,
                                 subject,
                                 date,
+                                start_time,
+                                end_time,
                             }),
                         });
                         closeModal("modalNewSession");
@@ -611,6 +637,7 @@
                 const classe = allClasses.find((c) => c.id === classeId);
                 const sessions = sessionsByClasse[classeId] || [];
                 const session = sessions.find((s) => s.id === sessionId);
+                activeSession = session || null;
 
                 renderSessionPanel(session, classe);
                 loadAttendance(sessionId);
@@ -619,17 +646,24 @@
 
             function renderSessionPanel(session, classe) {
                 const mainPanel = document.getElementById("mainPanel");
+                const canGenQR = sessionCanGenerateQr(session);
+                const windowNotice = canGenQR
+                    ? ""
+                    : `<div class="session-window-notice" style="margin-bottom:1rem;padding:.75rem 1rem;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);font-size:.85rem;color:var(--muted)">${esc(getSessionWindowNotice(session))}</div>`;
                 mainPanel.innerHTML = `
     <div class="session-detail-header">
       <div class="session-detail-title">
         <h1>${esc(session?.subject || "Séance")}</h1>
-        <p>🏫 ${esc(classe?.name || '')} &nbsp;·&nbsp; 📅 ${formatDate(session?.date)}</p>
+        <p>🏫 ${esc(classe?.name || '')} &nbsp;·&nbsp; 📅 ${formatDate(session?.date)} &nbsp;·&nbsp; 🕐 ${formatSessionWindow(session)}</p>
       </div>
       <div class="action-row">
-        <button class="btn green" id="btnGenQR">🔲 Générer le QR</button>
+        ${canGenQR
+            ? `<button class="btn green" id="btnGenQR">🔲 Générer le QR</button>`
+            : `<button class="btn green" id="btnGenQR" disabled title="Hors créneau horaire">🔲 Générer le QR</button>`}
         <button class="btn outline" id="btnExport">📥 Exporter Excel</button>
       </div>
     </div>
+    ${windowNotice}
 
     <!-- QR area (hidden until generated) -->
     <div id="qrArea" style="display:none"></div>
@@ -702,9 +736,10 @@
     </div>
   `;
 
-                document
-                    .getElementById("btnGenQR")
-                    .addEventListener("click", () => openGenQRModal(session.id));
+                const btnGen = document.getElementById("btnGenQR");
+                if (btnGen && canGenQR) {
+                    btnGen.addEventListener("click", () => openGenQRModal(session.id));
+                }
                 document
                     .getElementById("btnExport")
                     .addEventListener("click", () => exportExcel(session.id));
@@ -911,7 +946,7 @@
         <div class="qr-overlay-expired" id="qrExpiredOverlay">
           <span style="font-size:2rem">⛔</span>
           <span>QR Expired</span>
-          <button class="btn sm" style="margin-top:.5rem" onclick="generateQR(${activeSessionId})">Regenerate</button>
+          ${sessionCanGenerateQr(activeSession) ? `<button class="btn sm" style="margin-top:.5rem" onclick="generateQR(${activeSessionId})">Regenerate</button>` : ""}
         </div>
       </div>
       <div class="qr-info">
@@ -939,7 +974,7 @@
           <button class="btn sm green" onclick="if(lastQrData) openQRModal(lastQrData)">
             🔍 Enlarge QR
           </button>
-          <button class="btn sm outline" onclick="generateQR(${activeSessionId})">🔄 Regenerate</button>
+          ${sessionCanGenerateQr(activeSession) ? `<button class="btn sm outline" onclick="generateQR(${activeSessionId})">🔄 Regenerate</button>` : ""}
         </div>
       </div>
     </div>
@@ -985,9 +1020,11 @@
 
                 openModal("modalQR");
 
-                // Store for regenerate button
-                document.getElementById("btnRefreshQR")._sessionId =
-                    activeSessionId;
+                const refreshBtn = document.getElementById("btnRefreshQR");
+                refreshBtn._sessionId = activeSessionId;
+                const canRefresh = sessionCanGenerateQr(activeSession);
+                refreshBtn.disabled = !canRefresh;
+                refreshBtn.style.display = canRefresh ? "" : "none";
 
                 clearInterval(qrModalCountdownTimer);
                 qrModalCountdownTimer = setInterval(() => {
@@ -1019,6 +1056,10 @@
             document
                 .getElementById("btnRefreshQR")
                 .addEventListener("click", async () => {
+                    if (!sessionCanGenerateQr(activeSession)) {
+                        showToast(getSessionWindowNotice(activeSession), "error");
+                        return;
+                    }
                     const sid =
                         document.getElementById("btnRefreshQR")._sessionId ||
                         activeSessionId;
@@ -1239,6 +1280,56 @@
                 const m = Math.floor(secs / 60);
                 const s = secs % 60;
                 return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+            }
+
+            function formatSessionHour(timeStr) {
+                if (!timeStr) return "—";
+                return String(timeStr).slice(0, 5);
+            }
+
+            function formatSessionWindow(session) {
+                if (!session?.start_time || !session?.end_time) return "—";
+                return `${formatSessionHour(session.start_time)}–${formatSessionHour(session.end_time)}`;
+            }
+
+            function sessionWindowBounds(session) {
+                if (!session?.date || !session?.start_time || !session?.end_time) {
+                    return null;
+                }
+                const start = new Date(
+                    `${session.date}T${formatSessionHour(session.start_time)}`,
+                );
+                const end = new Date(
+                    `${session.date}T${formatSessionHour(session.end_time)}`,
+                );
+                return { start, end };
+            }
+
+            function sessionCanGenerateQr(session) {
+                if (!session) return false;
+                if (session.can_generate_qr === true) return true;
+                if (session.can_generate_qr === false) return false;
+                const bounds = sessionWindowBounds(session);
+                if (!bounds) return true;
+                const now = new Date();
+                return (
+                    session.is_active !== false &&
+                    now >= bounds.start &&
+                    now <= bounds.end
+                );
+            }
+
+            function getSessionWindowNotice(session) {
+                const bounds = sessionWindowBounds(session);
+                const window = formatSessionWindow(session);
+                if (!bounds) {
+                    return "Génération de QR indisponible pour cette séance.";
+                }
+                const now = new Date();
+                if (now < bounds.start) {
+                    return `La séance commence à ${formatSessionHour(session.start_time)} (${window}). Le QR sera disponible pendant ce créneau.`;
+                }
+                return `Créneau terminé (${window}). Consultez les statistiques ou exportez les présences.`;
             }
 
             function formatDate(dateStr) {

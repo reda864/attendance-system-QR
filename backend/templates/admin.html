@@ -211,6 +211,7 @@
             <th>Classe</th>
             <th>Enseignant</th>
             <th>Date</th>
+            <th>Horaire</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -379,6 +380,10 @@
         <select id="sessTeacher"><option value="">— Chargement… —</option></select>
       </div>
       <div class="field"><label>Date</label><input type="date" id="sessDate" /></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="field"><label>Heure de début</label><input type="time" id="sessStartTime" value="14:00" /></div>
+        <div class="field"><label>Heure de fin</label><input type="time" id="sessEndTime" value="16:00" /></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn outline" data-close="modalAddSession">Annuler</button>
@@ -599,14 +604,14 @@
       populateAttendanceFilters();
     } catch (e) {
       document.getElementById('sessionsBody').innerHTML =
-        `<tr class="empty-row"><td colspan="6">Erreur: ${esc(e.message)}</td></tr>`;
+        `<tr class="empty-row"><td colspan="7">Erreur: ${esc(e.message)}</td></tr>`;
     }
   }
 
   function renderSessionsList() {
     const tbody = document.getElementById('sessionsBody');
     if (!allSessions.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Aucune séance.</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Aucune séance.</td></tr>';
       return;
     }
     tbody.innerHTML = allSessions.map((s, i) => `
@@ -616,6 +621,7 @@
         <td>${esc(s.classe_name || '—')}</td>
         <td>${esc(s.teacher_name || teacherName(s.teacher))}</td>
         <td>${API.formatDate(s.date)}</td>
+        <td>${formatSessionWindow(s)}</td>
         <td><button class="btn sm outline" style="color:var(--red)" onclick="deleteSession(${s.id})">Supprimer</button></td>
       </tr>
     `).join('');
@@ -984,15 +990,30 @@
     openModal('modalAddSession');
   });
 
+  function formatSessionHour(timeStr) {
+    if (!timeStr) return '—';
+    return String(timeStr).slice(0, 5);
+  }
+
+  function formatSessionWindow(session) {
+    if (!session?.start_time || !session?.end_time) return '—';
+    return `${formatSessionHour(session.start_time)}–${formatSessionHour(session.end_time)}`;
+  }
+
   document.getElementById('btnSubmitSession').addEventListener('click', async () => {
     const body = {
       subject: document.getElementById('sessSubject').value.trim(),
       classe: document.getElementById('sessClasse').value,
       teacher: document.getElementById('sessTeacher').value,
       date: document.getElementById('sessDate').value,
+      start_time: document.getElementById('sessStartTime').value,
+      end_time: document.getElementById('sessEndTime').value,
     };
-    if (!body.subject || !body.classe || !body.teacher || !body.date) {
+    if (!body.subject || !body.classe || !body.teacher || !body.date || !body.start_time || !body.end_time) {
       showToast('Tous les champs sont obligatoires.', 'error'); return;
+    }
+    if (body.end_time <= body.start_time) {
+      showToast("L'heure de fin doit être après l'heure de début.", 'error'); return;
     }
     try {
       await API.apiFetch('/sessions/', { method: 'POST', body: JSON.stringify(body) });

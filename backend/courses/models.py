@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime, time
 
 from django.db import models
 from django.utils import timezone
@@ -20,6 +21,8 @@ class Session(models.Model):
         related_name="sessions",
     )
     date = models.DateField()
+    start_time = models.TimeField(default=time(8, 0), verbose_name="Heure de début")
+    end_time = models.TimeField(default=time(18, 0), verbose_name="Heure de fin")
     qr_token = models.CharField(max_length=64, unique=True, blank=True, null=True)
     qr_session_id = models.CharField(max_length=64, blank=True, default="")
     qr_expires_at = models.DateTimeField(null=True, blank=True)
@@ -39,6 +42,22 @@ class Session(models.Model):
 
     def __str__(self):
         return f"{self.subject} — {self.classe} ({self.date})"
+
+    def _session_window_bounds(self):
+        tz = timezone.get_current_timezone()
+        start = timezone.make_aware(datetime.combine(self.date, self.start_time), tz)
+        end = timezone.make_aware(datetime.combine(self.date, self.end_time), tz)
+        return start, end
+
+    @property
+    def is_within_session_window(self):
+        now = timezone.now()
+        start, end = self._session_window_bounds()
+        return start <= now <= end
+
+    @property
+    def can_generate_qr(self):
+        return self.is_active and self.is_within_session_window
 
     def generate_qr_token(
         self,
@@ -75,7 +94,11 @@ class Session(models.Model):
     def is_qr_valid(self):
         if not self.qr_token or not self.qr_expires_at:
             return False
-        return timezone.now() < self.qr_expires_at
+        now = timezone.now()
+        _, window_end = self._session_window_bounds()
+        if now > window_end:
+            return False
+        return now < self.qr_expires_at
 
     def teacher_can_manage(self, user) -> bool:
         if user.role == "admin":

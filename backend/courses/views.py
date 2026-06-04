@@ -4,6 +4,7 @@ from io import BytesIO
 
 import qrcode
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -67,6 +68,23 @@ class SessionViewSet(viewsets.ModelViewSet):
                         {"error": "Vous ne pouvez générer un QR que pour vos classes."},
                         status=status.HTTP_403_FORBIDDEN,
                     )
+
+        if not session.can_generate_qr:
+            current = timezone.now()
+            start, end = session._session_window_bounds()
+            if current < start:
+                msg = (
+                    f"La séance commence à {session.start_time.strftime('%H:%M')}. "
+                    "Le QR sera disponible pendant le créneau horaire."
+                )
+            else:
+                msg = (
+                    f"Le créneau horaire est terminé "
+                    f"({session.start_time.strftime('%H:%M')}–"
+                    f"{session.end_time.strftime('%H:%M')}). "
+                    "Consultez les statistiques ou exportez les présences."
+                )
+            return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
 
         ser = GenerateQRSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
