@@ -310,6 +310,13 @@ main {
   color: var(--text);
 }
 
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
 /* ── Buttons ── */
 .btn {
   padding: .58rem 1.15rem;
@@ -532,6 +539,28 @@ select,
 }
 select:hover,
 select:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, .1);
+}
+
+.search-input {
+  padding: .55rem .9rem .55rem 2.25rem;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat .75rem center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: .84rem;
+  font-family: var(--font);
+  font-weight: 500;
+  min-width: 220px;
+  transition: var(--transition);
+}
+.search-input::placeholder {
+  color: var(--muted);
+}
+.search-input:hover,
+.search-input:focus {
   border-color: var(--accent);
   outline: none;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, .1);

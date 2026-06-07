@@ -86,6 +86,7 @@
 
     <div class="live-toolbar">
       <div class="filters">
+        <input type="search" class="search-input" id="searchAttendance" placeholder="Rechercher étudiant, matière…" />
         <select id="filterClasse">
           <option value="">Toutes les classes</option>
         </select>
@@ -125,7 +126,10 @@
   <div class="tab-panel active" id="tab-users">
     <div class="section-head">
       <h2>Tous les utilisateurs</h2>
-      <button class="btn" id="btnOpenAddUser">+ Nouvel utilisateur</button>
+      <div class="section-actions">
+        <input type="search" class="search-input" id="searchUsers" placeholder="Rechercher nom, e-mail, rôle…" />
+        <button class="btn" id="btnOpenAddUser">+ Nouvel utilisateur</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
@@ -150,7 +154,10 @@
   <div class="tab-panel" id="tab-students">
     <div class="section-head">
       <h2>Tous les étudiants</h2>
-      <button class="btn" id="btnOpenAddStudent">+ Ajouter un étudiant</button>
+      <div class="section-actions">
+        <input type="search" class="search-input" id="searchStudents" placeholder="Rechercher nom, code Massar, classe…" />
+        <button class="btn" id="btnOpenAddStudent">+ Ajouter un étudiant</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
@@ -174,7 +181,10 @@
   <div class="tab-panel" id="tab-classes">
     <div class="section-head">
       <h2>Toutes les classes</h2>
-      <button class="btn" id="btnOpenAddClasse">+ Nouvelle classe</button>
+      <div class="section-actions">
+        <input type="search" class="search-input" id="searchClasses" placeholder="Rechercher nom, niveau, filière…" />
+        <button class="btn" id="btnOpenAddClasse">+ Nouvelle classe</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
@@ -200,7 +210,10 @@
   <div class="tab-panel" id="tab-sessions">
     <div class="section-head">
       <h2>Toutes les séances</h2>
-      <button class="btn" id="btnOpenAddSession">+ Nouvelle séance</button>
+      <div class="section-actions">
+        <input type="search" class="search-input" id="searchSessions" placeholder="Rechercher matière, classe, enseignant…" />
+        <button class="btn" id="btnOpenAddSession">+ Nouvelle séance</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
@@ -421,6 +434,21 @@
   let allAttendance = [];
   let adminLiveWS = null;
 
+  function searchQuery(id) {
+    return (document.getElementById(id)?.value || '').trim().toLowerCase();
+  }
+
+  function matchesQuery(query, ...values) {
+    if (!query) return true;
+    return values.some(v => String(v ?? '').toLowerCase().includes(query));
+  }
+
+  function bindSearchInput(id, renderFn) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', renderFn);
+  }
+
   async function loadAll() {
     await Promise.all([loadUsers(), loadClasses(), loadStudents(), loadSessions()]);
     await loadAttendance();
@@ -446,11 +474,17 @@
 
   function renderUsers() {
     const tbody = document.getElementById('usersBody');
-    if (!allUsers.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Aucun utilisateur.</td></tr>';
+    const query = searchQuery('searchUsers');
+    const filtered = allUsers.filter(u => matchesQuery(
+      query,
+      u.first_name, u.last_name, `${u.first_name} ${u.last_name}`,
+      u.email, u.role, roleLabel[u.role]
+    ));
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${query ? 'Aucun résultat.' : 'Aucun utilisateur.'}</td></tr>`;
       return;
     }
-    tbody.innerHTML = allUsers.map((u, i) => `
+    tbody.innerHTML = filtered.map((u, i) => `
       <tr>
         <td><span style="color:var(--muted)">${i + 1}</span></td>
         <td><strong>${esc(u.first_name)} ${esc(u.last_name)}</strong></td>
@@ -515,11 +549,17 @@
 
   function renderStudents() {
     const tbody = document.getElementById('studentsBody');
-    if (!allStudents.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Aucun étudiant.</td></tr>';
+    const query = searchQuery('searchStudents');
+    const filtered = allStudents.filter(s => matchesQuery(
+      query,
+      s.first_name, s.last_name, `${s.first_name} ${s.last_name}`,
+      s.code_massar, s.classe_name
+    ));
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${query ? 'Aucun résultat.' : 'Aucun étudiant.'}</td></tr>`;
       return;
     }
-    tbody.innerHTML = allStudents.map((s, i) => `
+    tbody.innerHTML = filtered.map((s, i) => `
       <tr>
         <td><span style="color:var(--muted)">${i + 1}</span></td>
         <td><strong>${esc(s.first_name)} ${esc(s.last_name)}</strong></td>
@@ -556,11 +596,16 @@
 
   function renderClasses() {
     const tbody = document.getElementById('classesBody');
-    if (!allClasses.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Aucune classe.</td></tr>';
+    const query = searchQuery('searchClasses');
+    const filtered = allClasses.filter(c => matchesQuery(
+      query,
+      c.name, c.level, c.field, c.academic_year, c.student_count
+    ));
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${query ? 'Aucun résultat.' : 'Aucune classe.'}</td></tr>`;
       return;
     }
-    tbody.innerHTML = allClasses.map((c, i) => `
+    tbody.innerHTML = filtered.map((c, i) => `
       <tr>
         <td><span style="color:var(--muted)">${i + 1}</span></td>
         <td><strong>${esc(c.name)}</strong></td>
@@ -610,11 +655,17 @@
 
   function renderSessionsList() {
     const tbody = document.getElementById('sessionsBody');
-    if (!allSessions.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Aucune séance.</td></tr>';
+    const query = searchQuery('searchSessions');
+    const filtered = allSessions.filter(s => matchesQuery(
+      query,
+      s.subject, s.classe_name, s.teacher_name, teacherName(s.teacher),
+      s.date, API.formatDate(s.date), formatSessionWindow(s)
+    ));
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${query ? 'Aucun résultat.' : 'Aucune séance.'}</td></tr>`;
       return;
     }
-    tbody.innerHTML = allSessions.map((s, i) => `
+    tbody.innerHTML = filtered.map((s, i) => `
       <tr>
         <td><span style="color:var(--muted)">${i + 1}</span></td>
         <td><strong>${esc(s.subject)}</strong></td>
@@ -720,13 +771,26 @@
     document.getElementById('statActiveCourses').textContent = subjectSet.size;
   }
 
+  function getFilteredAttendance() {
+    const query = searchQuery('searchAttendance');
+    if (!query) return allAttendance;
+    return allAttendance.filter(r => matchesQuery(
+      query,
+      r.student_name, r.student_code_massar, r.subject,
+      r.classe_session, r.classe_name, r.teacher_name,
+      API.formatDate(r.session_date), API.formatDateTime(r.validation_time)
+    ));
+  }
+
   function renderAttendanceTable() {
     const tbody = document.getElementById('attendanceBody');
-    if (!allAttendance.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Aucune présence enregistrée.</td></tr>';
+    const filtered = getFilteredAttendance();
+    const query = searchQuery('searchAttendance');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${query ? 'Aucun résultat.' : 'Aucune présence enregistrée.'}</td></tr>`;
       return;
     }
-    tbody.innerHTML = allAttendance.map((r, i) => attendanceRowHtml(r, i + 1)).join('');
+    tbody.innerHTML = filtered.map((r, i) => attendanceRowHtml(r, i + 1)).join('');
   }
 
   function attendanceRowHtml(r, idx, isNew) {
@@ -760,30 +824,7 @@
     allAttendance.unshift(record);
     document.getElementById('cntAttendance').textContent = allAttendance.length;
     updateAttendanceStats();
-
-    const tbody = document.getElementById('attendanceBody');
-    const empty = tbody.querySelector('.empty-row');
-    if (empty) empty.remove();
-
-    const tr = document.createElement('tr');
-    tr.className = 'new-row';
-    tr.innerHTML = `
-        <td style="color:var(--muted)">1</td>
-        <td><strong>${API.esc(record.student_name)}</strong></td>
-        <td style="font-family:monospace;color:var(--accent)">${API.esc(record.student_code_massar)}</td>
-        <td>${API.esc(record.subject || '—')}</td>
-        <td style="color:var(--muted)">${API.esc(record.classe_session || record.classe_name || '—')}</td>
-        <td style="color:var(--muted)">${API.esc(record.teacher_name || '—')}</td>
-        <td style="color:var(--muted)">${API.formatDate(record.session_date)}</td>
-        <td style="color:var(--muted);font-size:.8rem">${API.formatDateTime(record.validation_time)}</td>
-        <td><span class="badge badge-present">Présent</span></td>
-    `;
-    tbody.prepend(tr);
-
-    tbody.querySelectorAll('tr:not(.empty-row)').forEach((row, i) => {
-      const cell = row.querySelector('td');
-      if (cell) cell.textContent = i + 1;
-    });
+    renderAttendanceTable();
 
     showToast(t('markedPresent', { name: record.student_name, course: record.subject || '' }), 'success');
   }
@@ -815,6 +856,11 @@
     loadAttendance();
   });
   document.getElementById('filterSession')?.addEventListener('change', loadAttendance);
+  bindSearchInput('searchUsers', renderUsers);
+  bindSearchInput('searchStudents', renderStudents);
+  bindSearchInput('searchClasses', renderClasses);
+  bindSearchInput('searchSessions', renderSessionsList);
+  bindSearchInput('searchAttendance', renderAttendanceTable);
 
   /* ── Modals ── */
   function openModal(id) {
