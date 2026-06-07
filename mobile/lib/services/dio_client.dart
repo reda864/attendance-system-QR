@@ -160,7 +160,7 @@ class DioClient {
       case DioExceptionType.unknown:
       default:
         if (e.error is SocketException) return const NetworkException();
-        return UnknownException(e.message ?? 'Unknown error.');
+        return AppException(e.message ?? 'Unknown error.');
     }
   }
 

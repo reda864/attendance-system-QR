@@ -253,8 +253,11 @@
 
                 await loadClasses();
                 await loadLiveAttendance();
-                showLiveDashboard();
                 connectTeacherLiveWS();
+                const restored = await restoreSavedSession();
+                if (!restored) {
+                    showLiveDashboard();
+                }
             })();
 
             /* ═══════════════════════════════════════════════════════════
@@ -311,6 +314,38 @@
                     container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--red);font-size:.88rem;">
       ${t('failedLoad')}: ${e.message}
     </div>`;
+                }
+            }
+
+            async function restoreSavedSession() {
+                const raw = sessionStorage.getItem("teacherActiveSession");
+                if (!raw) return false;
+
+                try {
+                    const { sessionId, classeId } = JSON.parse(raw);
+                    if (!sessionId || !classeId) return false;
+
+                    const hdr = document.querySelector(
+                        `.course-header[data-classe-id="${classeId}"]`,
+                    );
+                    const list = document.getElementById(`sessions-${classeId}`);
+                    if (!hdr || !list) return false;
+
+                    document
+                        .querySelectorAll(".sessions-list")
+                        .forEach((l) => l.classList.remove("open"));
+                    document
+                        .querySelectorAll(".course-header")
+                        .forEach((h) => h.classList.remove("active"));
+                    hdr.classList.add("active");
+                    list.classList.add("open");
+                    activeClasseId = classeId;
+                    await loadSessions(classeId);
+                    selectSession(sessionId, classeId);
+                    return true;
+                } catch {
+                    sessionStorage.removeItem("teacherActiveSession");
+                    return false;
                 }
             }
 
@@ -639,9 +674,18 @@
                 const session = sessions.find((s) => s.id === sessionId);
                 activeSession = session || null;
 
+                sessionStorage.setItem(
+                    "teacherActiveSession",
+                    JSON.stringify({ sessionId, classeId }),
+                );
+
                 renderSessionPanel(session, classe);
                 loadAttendance(sessionId);
                 connectWS(sessionId);
+
+                if (session?.qr_token) {
+                    restoreSessionQR(sessionId);
+                }
             }
 
             function renderSessionPanel(session, classe) {
@@ -883,6 +927,19 @@
             /* ═══════════════════════════════════════════════════════════
    QR CODE
 ═══════════════════════════════════════════════════════════ */
+
+            async function restoreSessionQR(sessionId) {
+                try {
+                    const data = await API.apiFetch(
+                        `/sessions/${sessionId}/current-qr/`,
+                    );
+                    lastQrData = data;
+                    qrExpiresAt = new Date(data.qr_expires_at);
+                    showInlineQR(data);
+                } catch {
+                    // No QR generated for this session yet.
+                }
+            }
 
             async function generateQR(sessionId) {
                 const btn = document.getElementById("btnGenQR");

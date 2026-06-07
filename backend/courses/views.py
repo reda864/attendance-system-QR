@@ -53,6 +53,53 @@ class SessionViewSet(viewsets.ModelViewSet):
             return False
         return True
 
+    def _build_qr_payload(self, request, session):
+        qr_url = build_attend_url(request, session.qr_token)
+
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        buffer.seek(0)
+        b64 = base64.b64encode(buffer.read()).decode("utf-8")
+
+        return {
+            "qr_token": session.qr_token,
+            "qr_session_id": session.qr_session_id,
+            "qr_expires_at": session.qr_expires_at,
+            "qr_url": qr_url,
+            "attendance_radius_meters": session.attendance_radius_meters,
+            "location_latitude": session.location_latitude,
+            "location_longitude": session.location_longitude,
+            "is_qr_valid": session.is_qr_valid,
+            "qr_image_base64": f"data:image/png;base64,{b64}",
+        }
+
+    @action(detail=True, methods=["get"], url_path="current-qr")
+    def current_qr(self, request, pk=None):
+        session = self.get_object()
+
+        if not self._check_session_access(request, session):
+            return Response({"error": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+
+        if not session.qr_token:
+            return Response(
+                {"error": "Aucun QR généré pour cette séance."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(
+            self._build_qr_payload(request, session),
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=["post"], url_path="generate-qr")
     def generate_qr(self, request, pk=None):
         session = self.get_object()
@@ -99,37 +146,12 @@ class SessionViewSet(viewsets.ModelViewSet):
             longitude=longitude,
         )
 
-        qr_url = build_attend_url(request, session.qr_token)
-
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_M,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(qr_url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-        b64 = base64.b64encode(buffer.read()).decode("utf-8")
-
         logger.info(
             f"QR generated for session {session.id} by {request.user.email}, "
             f"expires at {session.qr_expires_at}"
         )
 
         return Response(
-            {
-                "qr_token": session.qr_token,
-                "qr_session_id": session.qr_session_id,
-                "qr_expires_at": session.qr_expires_at,
-                "qr_url": qr_url,
-                "attendance_radius_meters": session.attendance_radius_meters,
-                "location_latitude": session.location_latitude,
-                "location_longitude": session.location_longitude,
-                "qr_image_base64": f"data:image/png;base64,{b64}",
-            },
+            self._build_qr_payload(request, session),
             status=status.HTTP_200_OK,
         )
