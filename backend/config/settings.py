@@ -123,7 +123,7 @@ REST_FRAMEWORK = {
         "validate_attendance": "10/minute",
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 50,
+    "PAGE_SIZE": 1000,
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
     "FORMAT_SUFFIX_PATTERNS": False,
