@@ -28,8 +28,7 @@ class SessionViewSet(viewsets.ModelViewSet):
         qs = Session.objects.select_related("teacher", "classe").all()
 
         if user.role == "teacher":
-            qs = qs.filter(teacher=user) | qs.filter(classe__teachers=user)
-            qs = qs.distinct()
+            qs = qs.filter(teacher=user)
 
         classe_id = self.request.query_params.get("classe")
         if classe_id:
