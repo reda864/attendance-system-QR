@@ -63,9 +63,13 @@ class _ValidationScreenState extends State<ValidationScreen>
 
     _qrToken = attendanceProvider.scannedQrToken;
 
-    // Auto-fill from logged-in user if available
+    // Auto-fill from logged-in student profile (official records)
     final user = authProvider.user;
-    if (user != null) {
+    if (user?.studentProfile != null) {
+      final profile = user!.studentProfile!;
+      _firstNameController.text = profile.firstName;
+      _lastNameController.text = profile.lastName;
+    } else if (user != null) {
       _firstNameController.text = user.firstName;
       _lastNameController.text = user.lastName;
     }
