@@ -96,7 +96,7 @@ class TokenRefreshView(TokenRefreshView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.prefetch_related("assigned_classes").order_by("-created_at")
+    queryset = User.objects.order_by("-created_at")
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get_serializer_class(self) -> Type[BaseSerializer]:
@@ -155,7 +155,7 @@ class MeView(APIView):
 
     def get(self, request):
         user = cast(User, request.user)
-        user = User.objects.prefetch_related("assigned_classes").select_related(
+        user = User.objects.select_related(
             "student_profile__classe"
         ).get(pk=user.pk)
         user.active_role = get_active_role(request.user)

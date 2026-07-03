@@ -33,12 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
     student_profile = serializers.SerializerMethodField()
     active_role = serializers.SerializerMethodField()
     available_roles = serializers.SerializerMethodField()
-    assigned_class_ids = serializers.PrimaryKeyRelatedField(
-        source="assigned_classes",
-        many=True,
-        queryset=Classe.objects.all(),
-        required=False,
-    )
+    assigned_class_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -57,7 +52,13 @@ class UserSerializer(serializers.ModelSerializer):
             "student_profile",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at", "active_role", "available_roles"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "active_role",
+            "available_roles",
+            "assigned_class_ids",
+        ]
 
     def get_active_role(self, obj):
         return getattr(obj, "active_role", None) or obj.role
@@ -68,6 +69,9 @@ class UserSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         return obj.full_name
 
+    def get_assigned_class_ids(self, obj):
+        return obj.get_assigned_class_ids()
+
     def get_student_profile(self, obj):
         if obj.role != "student":
             return None
@@ -75,29 +79,20 @@ class UserSerializer(serializers.ModelSerializer):
             profile = obj.student_profile
         except Student.DoesNotExist:
             return None
+        classe_name = None
+        if profile.classe_id:
+            try:
+                classe_name = profile.classe.name
+            except Exception:
+                pass
         return {
             "id": profile.id,
             "first_name": profile.first_name,
             "last_name": profile.last_name,
             "code_massar": profile.code_massar,
             "classe_id": profile.classe_id,
-            "classe_name": profile.classe.name,
+            "classe_name": classe_name,
         }
-
-    def validate_assigned_class_ids(self, value):
-        instance = self.instance
-        role = getattr(instance, "role", None) if instance else None
-        is_also_teacher = (
-            getattr(instance, "is_also_teacher", False) if instance else False
-        )
-        can_have_classes = role == "teacher" or (
-            role == "admin" and is_also_teacher
-        )
-        if instance and not can_have_classes and value:
-            raise serializers.ValidationError(
-                "Seuls les enseignants peuvent être affectés à des classes."
-            )
-        return value
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

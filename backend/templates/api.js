@@ -126,10 +126,15 @@ async function login(email, password) {
   });
 
   if (!res.ok) {
-    let msg = 'Login failed';
+    let msg = 'Échec de la connexion';
     try {
       const d = await res.json();
-      msg = d.detail || d.message || msg;
+      msg =
+        d.detail
+        || d.message
+        || (Array.isArray(d.non_field_errors) ? d.non_field_errors[0] : null)
+        || (typeof d === 'object' ? Object.values(d).flat().find(Boolean) : null)
+        || msg;
     } catch {}
     throw new Error(msg);
   }

@@ -74,7 +74,7 @@ class SessionSerializer(serializers.ModelSerializer):
         classe = data.get("classe", getattr(self.instance, "classe", None))
         request = self.context.get("request")
         if request and acting_as_teacher(request.user) and classe:
-            assigned = request.user.assigned_classes.filter(pk=classe.pk).exists()
+            assigned = classe.pk in request.user.get_assigned_class_ids()
             has_sessions = Session.objects.filter(
                 classe=classe, teacher=request.user
             ).exists()

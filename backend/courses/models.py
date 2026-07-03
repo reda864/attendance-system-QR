@@ -110,4 +110,4 @@ class Session(models.Model):
             return False
         if self.teacher_id == user.id:
             return True
-        return self.classe_id in user.assigned_classes.values_list("pk", flat=True)
+        return self.classe_id in user.get_assigned_class_ids()

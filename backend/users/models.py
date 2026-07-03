@@ -75,6 +75,13 @@ class User(AbstractBaseUser, PermissionsMixin):
             return ["admin", "teacher"]
         return [self.role]
 
+    def get_assigned_class_ids(self) -> list[int]:
+        return list(
+            self.assigned_classes.through.objects.filter(user_id=self.pk).values_list(
+                "classe_id", flat=True
+            )
+        )
+
 
 class Classe(models.Model):
     """Groupe d'étudiants (nom, niveau, filière, année universitaire)."""
