@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 
 from courses.models import Session
 from users.permissions import IsAdminOrTeacher, IsStudent
+from users.roles import acting_as_teacher
 
 from .models import Attendance, SuspiciousAttempt
 from .serializers import (
@@ -197,7 +198,7 @@ class AllAttendanceListView(ListAPIView):
         ).order_by("-validation_time")
 
         user = self.request.user
-        if user.role == "teacher":
+        if acting_as_teacher(user):
             qs = qs.filter(session__teacher=user)
 
         session_id = self.request.query_params.get("session")
@@ -218,7 +219,7 @@ class SessionAttendanceListView(ListAPIView):
         session_id = self.kwargs["session_id"]
         user = self.request.user
 
-        if user.role == "teacher":
+        if acting_as_teacher(user):
             try:
                 session = Session.objects.select_related("teacher", "classe").get(
                     pk=session_id
@@ -246,7 +247,7 @@ class SessionSuspiciousAttemptsView(ListAPIView):
         except Session.DoesNotExist:
             return SuspiciousAttempt.objects.none()
 
-        if user.role == "teacher" and not session.teacher_can_manage(user):
+        if acting_as_teacher(user) and not session.teacher_can_manage(user):
             return SuspiciousAttempt.objects.none()
 
         return SuspiciousAttempt.objects.filter(session_id=session_id).order_by(

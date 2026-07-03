@@ -4,6 +4,8 @@ from datetime import datetime, time
 from django.db import models
 from django.utils import timezone
 
+from users.roles import acting_as_admin, acting_as_teacher
+
 
 class Session(models.Model):
     """Séance de cours : matière, enseignant, classe, date."""
@@ -13,7 +15,8 @@ class Session(models.Model):
         "users.User",
         on_delete=models.CASCADE,
         related_name="sessions",
-        limit_choices_to={"role": "teacher"},
+        limit_choices_to=models.Q(role="teacher")
+        | models.Q(role="admin", is_also_teacher=True),
     )
     classe = models.ForeignKey(
         "users.Classe",
@@ -101,9 +104,9 @@ class Session(models.Model):
         return now < self.qr_expires_at
 
     def teacher_can_manage(self, user) -> bool:
-        if user.role == "admin":
+        if acting_as_admin(user):
             return True
-        if user.role != "teacher":
+        if not acting_as_teacher(user):
             return False
         if self.teacher_id == user.id:
             return True

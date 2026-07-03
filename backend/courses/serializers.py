@@ -2,6 +2,8 @@ from rest_framework import serializers
 
 from attendance.utils import round_coordinate
 
+from users.roles import acting_as_teacher
+
 from .models import Session
 
 
@@ -17,7 +19,7 @@ class SessionSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         request = self.context.get("request")
         user = getattr(request, "user", None) if request else None
-        if user and getattr(user, "is_authenticated", False) and user.role == "teacher":
+        if user and getattr(user, "is_authenticated", False) and acting_as_teacher(user):
             self.fields["teacher"].required = False
             self.fields["teacher"].read_only = True
 
@@ -71,7 +73,7 @@ class SessionSerializer(serializers.ModelSerializer):
         teacher = data.get("teacher", getattr(self.instance, "teacher", None))
         classe = data.get("classe", getattr(self.instance, "classe", None))
         request = self.context.get("request")
-        if request and request.user.role == "teacher" and classe:
+        if request and acting_as_teacher(request.user) and classe:
             assigned = request.user.assigned_classes.filter(pk=classe.pk).exists()
             has_sessions = Session.objects.filter(
                 classe=classe, teacher=request.user

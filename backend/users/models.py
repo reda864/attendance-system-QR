@@ -34,6 +34,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="teacher")
+    is_also_teacher = models.BooleanField(
+        default=False,
+        help_text="Si coché, un administrateur peut aussi agir comme enseignant.",
+    )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -58,6 +62,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def is_teacher_capable(self) -> bool:
+        return self.role == "teacher" or (
+            self.role == "admin" and self.is_also_teacher
+        )
+
+    @property
+    def available_roles(self) -> list[str]:
+        if self.role == "admin" and self.is_also_teacher:
+            return ["admin", "teacher"]
+        return [self.role]
 
 
 class Classe(models.Model):

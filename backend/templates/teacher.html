@@ -24,6 +24,10 @@
                     <span id="navUserName">Chargement…</span>
                     <span class="badge badge-teacher">Enseignant</span>
                 </div>
+                <button type="button" class="btn-role-switch" id="roleSwitchBtn" hidden title="Passer en mode administrateur">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 4.5v9L12 21l-9-4.5v-9L12 3z"/><path d="M12 12l9-4.5"/><path d="M12 12v9"/><path d="M12 12L3 7.5"/></svg>
+                    <span class="role-switch-label">Mode administrateur</span>
+                </button>
                 <button class="btn-icon" onclick="API.logout()" title="Déconnexion">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     Déconnexion
@@ -241,12 +245,13 @@
 ═══════════════════════════════════════════════════════════ */
             (async () => {
                 try {
-                    currentUser = await API.requireAuth(["teacher", "admin"]);
+                    currentUser = await API.requireAuth(["teacher"]);
                     document.getElementById("navUserName").textContent =
                         `${currentUser.first_name} ${currentUser.last_name}`;
                     document.getElementById("avatarInitials").textContent =
                         (currentUser.first_name?.[0] || "") +
                         (currentUser.last_name?.[0] || "");
+                    API.bindRoleSwitch("roleSwitchBtn", "admin", "/admin-ui/");
                 } catch {
                     return;
                 }

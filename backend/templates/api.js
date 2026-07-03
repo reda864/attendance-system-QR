@@ -140,6 +140,61 @@ async function login(email, password) {
   return data;
 }
 
+function getEffectiveRole(user) {
+  return user?.active_role || user?.role;
+}
+
+async function switchRole(role) {
+  const data = await apiFetch('/auth/switch-role/', {
+    method: 'POST',
+    body: JSON.stringify({ role }),
+  });
+  setTokens(data.access, data.refresh);
+  localStorage.setItem('current_user', JSON.stringify(data.user));
+  return data;
+}
+
+function canSwitchRoles(user) {
+  const roles = user?.available_roles;
+  return Array.isArray(roles) && roles.includes('admin') && roles.includes('teacher');
+}
+
+async function bindRoleSwitch(buttonId, targetRole, redirectPath) {
+  const btn = document.getElementById(buttonId);
+  if (!btn) return;
+
+  let user;
+  try {
+    user = await apiFetch('/auth/me/');
+    localStorage.setItem('current_user', JSON.stringify(user));
+  } catch {
+    btn.hidden = true;
+    return;
+  }
+
+  if (!canSwitchRoles(user)) {
+    btn.hidden = true;
+    return;
+  }
+
+  btn.hidden = false;
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const label = btn.querySelector('.role-switch-label');
+    const original = label ? label.textContent : '';
+    if (label) label.textContent = 'Changement…';
+    try {
+      await switchRole(targetRole);
+      window.location.href = redirectPath;
+    } catch (err) {
+      btn.disabled = false;
+      if (label) label.textContent = original;
+      alert(err.message || 'Impossible de changer de rôle.');
+    }
+  });
+}
+
 async function getMe() {
   const cached = localStorage.getItem('current_user');
   if (cached) {
@@ -171,7 +226,8 @@ async function requireAuth(allowedRoles) {
     const user = await getMe();
     if (allowedRoles) {
       const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-      if (!roles.includes(user.role)) {
+      const effectiveRole = getEffectiveRole(user);
+      if (!roles.includes(effectiveRole)) {
         window.location.href = '/login/';
         throw new Error('Forbidden');
       }
@@ -252,6 +308,10 @@ window.API = {
   apiFetch,
   login,
   getMe,
+  getEffectiveRole,
+  canSwitchRoles,
+  switchRole,
+  bindRoleSwitch,
   logout,
   requireAuth,
   getWsBase,

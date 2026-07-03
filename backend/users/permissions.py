@@ -1,25 +1,27 @@
 from rest_framework.permissions import BasePermission
 
+from .roles import acting_as_admin, get_active_role
+
 
 class IsAdmin(BasePermission):
-    """Allows access only to users with role='admin'."""
+    """Allows access only when acting as admin."""
 
     def has_permission(self, request, view):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role == "admin"
+            and acting_as_admin(request.user)
         )
 
 
 class IsAdminOrTeacher(BasePermission):
-    """Allows access to admin and teacher roles."""
+    """Allows access when acting as admin or teacher."""
 
     def has_permission(self, request, view):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role in ("admin", "teacher")
+            and get_active_role(request.user) in ("admin", "teacher")
         )
 
 

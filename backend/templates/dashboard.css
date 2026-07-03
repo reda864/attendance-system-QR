@@ -165,6 +165,50 @@ nav {
   box-shadow: var(--shadow-sm);
 }
 
+.btn-role-switch {
+  background: linear-gradient(135deg, var(--accent-soft), var(--purple-soft));
+  border: 1px solid rgba(79, 70, 229, .25);
+  color: var(--accent);
+  border-radius: 10px;
+  padding: .45rem .95rem;
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: var(--font);
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+.btn-role-switch:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e0e7ff, #ede9fe);
+  border-color: rgba(79, 70, 229, .4);
+  color: var(--accent-h);
+  box-shadow: var(--shadow-sm);
+}
+.btn-role-switch:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+.btn-role-switch[hidden] {
+  display: none !important;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .88rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.checkbox-label input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+}
+
 /* ── Main layout ── */
 main {
   max-width: 1320px;

@@ -31,6 +31,8 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     student_profile = serializers.SerializerMethodField()
+    active_role = serializers.SerializerMethodField()
+    available_roles = serializers.SerializerMethodField()
     assigned_class_ids = serializers.PrimaryKeyRelatedField(
         source="assigned_classes",
         many=True,
@@ -47,12 +49,21 @@ class UserSerializer(serializers.ModelSerializer):
             "full_name",
             "email",
             "role",
+            "is_also_teacher",
+            "active_role",
+            "available_roles",
             "is_active",
             "assigned_class_ids",
             "student_profile",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "active_role", "available_roles"]
+
+    def get_active_role(self, obj):
+        return getattr(obj, "active_role", None) or obj.role
+
+    def get_available_roles(self, obj):
+        return obj.available_roles
 
     def get_full_name(self, obj):
         return obj.full_name
@@ -74,7 +85,15 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def validate_assigned_class_ids(self, value):
-        if self.instance and self.instance.role != "teacher" and value:
+        instance = self.instance
+        role = getattr(instance, "role", None) if instance else None
+        is_also_teacher = (
+            getattr(instance, "is_also_teacher", False) if instance else False
+        )
+        can_have_classes = role == "teacher" or (
+            role == "admin" and is_also_teacher
+        )
+        if instance and not can_have_classes and value:
             raise serializers.ValidationError(
                 "Seuls les enseignants peuvent être affectés à des classes."
             )
@@ -105,6 +124,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "role",
+            "is_also_teacher",
             "password",
             "password_confirm",
             "assigned_class_ids",
@@ -120,9 +140,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
         data.pop("password_confirm", None)
         assigned = data.get("assigned_classes", [])
         role = data.get("role", "teacher")
-        if role != "teacher" and assigned:
+        is_also_teacher = data.get("is_also_teacher", False)
+        can_have_classes = role == "teacher" or (role == "admin" and is_also_teacher)
+        if not can_have_classes and assigned:
             raise serializers.ValidationError(
                 {"assigned_class_ids": "Seuls les enseignants peuvent avoir des classes."}
+            )
+        if role != "admin" and is_also_teacher:
+            raise serializers.ValidationError(
+                {"is_also_teacher": "Seuls les administrateurs peuvent être aussi enseignants."}
             )
         return data
 
@@ -159,6 +185,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "role",
+            "is_also_teacher",
             "is_active",
             "password",
             "assigned_class_ids",
@@ -166,10 +193,18 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         role = data.get("role", getattr(self.instance, "role", None))
+        is_also_teacher = data.get(
+            "is_also_teacher", getattr(self.instance, "is_also_teacher", False)
+        )
         assigned = data.get("assigned_classes")
-        if assigned is not None and role != "teacher" and assigned:
+        can_have_classes = role == "teacher" or (role == "admin" and is_also_teacher)
+        if assigned is not None and not can_have_classes and assigned:
             raise serializers.ValidationError(
                 {"assigned_class_ids": "Seuls les enseignants peuvent avoir des classes."}
+            )
+        if role != "admin" and is_also_teacher:
+            raise serializers.ValidationError(
+                {"is_also_teacher": "Seuls les administrateurs peuvent être aussi enseignants."}
             )
         return data
 
@@ -184,6 +219,18 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         if assigned_classes is not None:
             instance.assigned_classes.set(assigned_classes)
         return instance
+
+
+class SwitchRoleSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=["admin", "teacher"])
+
+    def validate_role(self, value):
+        user = self.context["request"].user
+        if value not in user.available_roles:
+            raise serializers.ValidationError(
+                "Vous ne pouvez pas basculer vers ce rôle."
+            )
+        return value
 
 
 class ClasseSerializer(serializers.ModelSerializer):

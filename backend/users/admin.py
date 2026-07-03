@@ -13,12 +13,12 @@ class ClasseAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ["email", "first_name", "last_name", "role", "is_active"]
-    list_filter = ["role", "is_active"]
+    list_display = ["email", "first_name", "last_name", "role", "is_also_teacher", "is_active"]
+    list_filter = ["role", "is_also_teacher", "is_active"]
     filter_horizontal = ["assigned_classes"]
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal info", {"fields": ("first_name", "last_name", "role")}),
+        ("Personal info", {"fields": ("first_name", "last_name", "role", "is_also_teacher")}),
         ("Classes", {"fields": ("assigned_classes",)}),
         (
             "Permissions",

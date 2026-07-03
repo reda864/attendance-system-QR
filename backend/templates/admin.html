@@ -19,6 +19,10 @@
       <span id="navUserName">Chargement…</span>
       <span class="badge badge-admin">Administrateur</span>
     </div>
+    <button type="button" class="btn-role-switch" id="roleSwitchBtn" hidden title="Passer en mode enseignant">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M21 8l-7 7-4-4-6 6"/><path d="M3 16v5h5"/></svg>
+      <span class="role-switch-label">Mode enseignant</span>
+    </button>
     <button class="btn-icon" onclick="API.logout()" title="Déconnexion">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Déconnexion
@@ -266,6 +270,12 @@
           <option value="student">Étudiant</option>
         </select>
       </div>
+      <div class="field" id="uAlsoTeacherWrap" style="display:none">
+        <label class="checkbox-label">
+          <input type="checkbox" id="uAlsoTeacher" />
+          Aussi enseignant (peut basculer vers le mode enseignant)
+        </label>
+      </div>
       <div class="field">
         <label>Mot de passe</label>
         <input type="password" id="uPassword" placeholder="••••••••" />
@@ -340,6 +350,12 @@
           <option value="admin">Admin</option>
           <option value="student">Étudiant</option>
         </select>
+      </div>
+      <div class="field" id="euAlsoTeacherWrap" style="display:none">
+        <label class="checkbox-label">
+          <input type="checkbox" id="euAlsoTeacher" />
+          Aussi enseignant (peut basculer vers le mode enseignant)
+        </label>
       </div>
       <div class="field" id="euClassesWrap">
         <label>Classes assignées (enseignant)</label>
@@ -421,6 +437,7 @@
         `${currentUser.first_name} ${currentUser.last_name}`;
       document.getElementById('avatarInitials').textContent =
         (currentUser.first_name?.[0] || '') + (currentUser.last_name?.[0] || '');
+      API.bindRoleSwitch('roleSwitchBtn', 'teacher', '/teacher/');
     } catch {}
 
     loadAll();
@@ -470,6 +487,25 @@
     }
   }
 
+  function userCanAssignClasses(role, isAlsoTeacher) {
+    return role === 'teacher' || (role === 'admin' && isAlsoTeacher);
+  }
+
+  function syncUserClassFields(prefix) {
+    const role = document.getElementById(`${prefix}Role`).value;
+    const isAlsoTeacher = document.getElementById(`${prefix}AlsoTeacher`)?.checked || false;
+    const alsoWrap = document.getElementById(`${prefix}AlsoTeacherWrap`);
+    const classesWrap = document.getElementById(`${prefix}ClassesWrap`);
+    if (alsoWrap) alsoWrap.style.display = role === 'admin' ? 'block' : 'none';
+    if (classesWrap) {
+      classesWrap.style.display = userCanAssignClasses(role, isAlsoTeacher) ? 'block' : 'none';
+    }
+  }
+
+  function collectAssignedClassIds(selectId) {
+    return Array.from(document.getElementById(selectId).selectedOptions).map(o => Number(o.value));
+  }
+
   const roleLabel = { admin: 'Admin', teacher: 'Enseignant', student: 'Étudiant' };
 
   function renderUsers() {
@@ -489,7 +525,7 @@
         <td><span style="color:var(--muted)">${i + 1}</span></td>
         <td><strong>${esc(u.first_name)} ${esc(u.last_name)}</strong></td>
         <td style="color:var(--muted)">${esc(u.email)}</td>
-        <td><span class="badge badge-${u.role}">${roleLabel[u.role] || u.role}</span></td>
+        <td><span class="badge badge-${u.role}">${roleLabel[u.role] || u.role}</span>${u.is_also_teacher ? ' <span class="badge badge-teacher" title="Peut basculer en mode enseignant">+ Ens.</span>' : ''}</td>
         <td><span class="badge ${u.is_active ? 'badge-present' : 'badge-absent'}">${u.is_active ? 'Actif' : 'Inactif'}</span></td>
         <td class="actions-cell">
           <button class="btn sm outline" onclick="openEditUser(${u.id})">Modifier</button>
@@ -508,12 +544,13 @@
     document.getElementById('euLastName').value = u.last_name;
     document.getElementById('euEmail').value = u.email;
     document.getElementById('euRole').value = u.role;
+    document.getElementById('euAlsoTeacher').checked = !!u.is_also_teacher;
     document.getElementById('euPassword').value = '';
     populateTeacherClassSelect('euClasses');
     const sel = document.getElementById('euClasses');
     const assigned = u.assigned_class_ids || [];
     Array.from(sel.options).forEach(o => { o.selected = assigned.includes(Number(o.value)) || assigned.includes(o.value); });
-    document.getElementById('euClassesWrap').style.display = u.role === 'teacher' ? 'block' : 'none';
+    syncUserClassFields('eu');
     openModal('modalEditUser');
   }
 
@@ -883,28 +920,28 @@
   /* ── Add User ── */
   document.getElementById('btnOpenAddUser').addEventListener('click', () => {
     populateTeacherClassSelect('uClasses');
-    document.getElementById('uClassesWrap').style.display =
-      document.getElementById('uRole').value === 'teacher' ? 'block' : 'none';
+    document.getElementById('uAlsoTeacher').checked = false;
+    syncUserClassFields('u');
     openModal('modalAddUser');
   });
 
-  document.getElementById('uRole')?.addEventListener('change', (e) => {
-    document.getElementById('uClassesWrap').style.display =
-      e.target.value === 'teacher' ? 'block' : 'none';
-  });
+  document.getElementById('uRole')?.addEventListener('change', () => syncUserClassFields('u'));
+  document.getElementById('uAlsoTeacher')?.addEventListener('change', () => syncUserClassFields('u'));
 
   document.getElementById('btnSubmitUser').addEventListener('click', async () => {
+    const role = document.getElementById('uRole').value;
     const body = {
       first_name: document.getElementById('uFirstName').value.trim(),
       last_name:  document.getElementById('uLastName').value.trim(),
       email:      document.getElementById('uEmail').value.trim(),
-      role:       document.getElementById('uRole').value,
+      role,
       password:   document.getElementById('uPassword').value,
     };
-    if (body.role === 'teacher') {
-      body.assigned_class_ids = Array.from(
-        document.getElementById('uClasses').selectedOptions
-      ).map(o => Number(o.value));
+    if (role === 'admin') {
+      body.is_also_teacher = document.getElementById('uAlsoTeacher').checked;
+    }
+    if (userCanAssignClasses(role, body.is_also_teacher)) {
+      body.assigned_class_ids = collectAssignedClassIds('uClasses');
     }
 
     if (!body.first_name || !body.last_name || !body.email || !body.password) {
@@ -946,22 +983,27 @@
     }
   });
 
-  document.getElementById('euRole')?.addEventListener('change', (e) => {
-    document.getElementById('euClassesWrap').style.display = e.target.value === 'teacher' ? 'block' : 'none';
-  });
+  document.getElementById('euRole')?.addEventListener('change', () => syncUserClassFields('eu'));
+  document.getElementById('euAlsoTeacher')?.addEventListener('change', () => syncUserClassFields('eu'));
 
   document.getElementById('btnSubmitEditUser').addEventListener('click', async () => {
     const id = document.getElementById('euId').value;
+    const role = document.getElementById('euRole').value;
     const body = {
       first_name: document.getElementById('euFirstName').value.trim(),
       last_name: document.getElementById('euLastName').value.trim(),
       email: document.getElementById('euEmail').value.trim(),
-      role: document.getElementById('euRole').value,
+      role,
     };
     const pwd = document.getElementById('euPassword').value;
     if (pwd) body.password = pwd;
-    if (body.role === 'teacher') {
-      body.assigned_class_ids = Array.from(document.getElementById('euClasses').selectedOptions).map(o => Number(o.value));
+    if (role === 'admin') {
+      body.is_also_teacher = document.getElementById('euAlsoTeacher').checked;
+    } else {
+      body.is_also_teacher = false;
+    }
+    if (userCanAssignClasses(role, body.is_also_teacher)) {
+      body.assigned_class_ids = collectAssignedClassIds('euClasses');
     }
     try {
       await API.apiFetch(`/users/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });

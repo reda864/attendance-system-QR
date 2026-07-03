@@ -80,8 +80,9 @@
       if (u) {
         try {
           const user = JSON.parse(u);
-          if (user.role === 'admin') window.location.href = '/admin-ui/';
-          else if (user.role === 'teacher') window.location.href = '/teacher/';
+          const role = user.active_role || user.role;
+          if (role === 'admin') window.location.href = '/admin-ui/';
+          else if (role === 'teacher') window.location.href = '/teacher/';
           else window.location.href = '/student/';
         } catch {}
       }
@@ -116,7 +117,7 @@
       setLoading(true);
       try {
         const data = await API.login(email, password);
-        const role = data.user?.role;
+        const role = data.user?.active_role || data.user?.role;
         const name = data.user?.first_name || email;
         showAlert(t('welcomeRedirect', { name }), 'success');
 

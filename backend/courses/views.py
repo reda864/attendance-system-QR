@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from config.site_url import build_attend_url
 from users.permissions import IsAdmin, IsAdminOrTeacher
 
+from users.roles import acting_as_teacher
+
 from .models import Session
 from .serializers import GenerateQRSerializer, SessionSerializer
 
@@ -27,7 +29,7 @@ class SessionViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Session.objects.select_related("teacher", "classe").all()
 
-        if user.role == "teacher":
+        if acting_as_teacher(user):
             qs = qs.filter(teacher=user)
 
         classe_id = self.request.query_params.get("classe")
@@ -40,12 +42,12 @@ class SessionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.role == "teacher":
+        if acting_as_teacher(user):
             session = serializer.save(teacher=user)
         else:
             session = serializer.save()
         teacher = session.teacher
-        if teacher.role == "teacher":
+        if teacher.is_teacher_capable:
             teacher.assigned_classes.add(session.classe)
 
     def _check_session_access(self, request, session):
@@ -107,7 +109,7 @@ class SessionViewSet(viewsets.ModelViewSet):
         if not self._check_session_access(request, session):
             return Response({"error": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
 
-        if request.user.role == "teacher":
+        if acting_as_teacher(request.user):
             if session.teacher_id != request.user.id:
                 if not session.classe.teachers.filter(pk=request.user.pk).exists():
                     return Response(
