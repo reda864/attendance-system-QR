@@ -209,6 +209,57 @@ nav {
   accent-color: var(--accent);
 }
 
+/* ── Academic structure tree (admin) ── */
+.academic-tree { display: flex; flex-direction: column; gap: 1rem; }
+.academic-class {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+.academic-class-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+.academic-meta { font-size: .78rem; color: var(--muted); margin-top: .25rem; }
+.academic-children { padding: .75rem 1rem 1rem; display: flex; flex-direction: column; gap: .75rem; }
+.academic-semester {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.academic-semester-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .65rem .85rem;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+}
+.academic-modules { padding: .5rem .85rem .75rem; display: flex; flex-direction: column; gap: .45rem; }
+.academic-module {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+  padding: .45rem .5rem;
+  border-radius: 8px;
+  background: var(--surface2);
+  font-size: .88rem;
+}
+.academic-teacher { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.academic-code { color: var(--muted); font-size: .82rem; }
+.academic-actions { display: flex; gap: .35rem; flex-wrap: wrap; }
+.academic-empty { font-size: .82rem; color: var(--muted); padding: .35rem .5rem; font-style: italic; }
+
 /* ── Main layout ── */
 main {
   max-width: 1320px;

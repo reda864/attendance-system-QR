@@ -1,14 +1,28 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import Classe, Student, User
+from .models import Classe, Module, Semester, Student, User
 
 
 @admin.register(Classe)
 class ClasseAdmin(admin.ModelAdmin):
-    list_display = ["name", "level", "field", "academic_year", "created_at"]
+    list_display = ["name", "code", "level", "field", "academic_year", "created_at"]
     search_fields = ["name", "field"]
     list_filter = ["level", "academic_year"]
+
+
+@admin.register(Semester)
+class SemesterAdmin(admin.ModelAdmin):
+    list_display = ["code", "name", "classe", "order", "created_at"]
+    list_filter = ["classe"]
+    search_fields = ["code", "name", "classe__name"]
+
+
+@admin.register(Module)
+class ModuleAdmin(admin.ModelAdmin):
+    list_display = ["name", "code", "semester", "teacher", "created_at"]
+    list_filter = ["semester__classe", "teacher"]
+    search_fields = ["name", "code", "teacher__email"]
 
 
 @admin.register(User)

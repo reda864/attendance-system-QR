@@ -76,20 +76,42 @@ class User(AbstractBaseUser, PermissionsMixin):
         return [self.role]
 
     def get_assigned_class_ids(self) -> list[int]:
+        """Legacy M2M — prefer get_teaching_class_ids() via modules."""
         return list(
             self.assigned_classes.through.objects.filter(user_id=self.pk).values_list(
                 "classe_id", flat=True
             )
         )
 
+    def get_teaching_class_ids(self) -> list[int]:
+        return list(
+            Module.objects.filter(teacher_id=self.pk)
+            .values_list("semester__classe_id", flat=True)
+            .distinct()
+        )
+
+    def get_teaching_module_ids(self) -> list[int]:
+        return list(
+            Module.objects.filter(teacher_id=self.pk).values_list("pk", flat=True)
+        )
+
 
 class Classe(models.Model):
-    """Groupe d'étudiants (nom, niveau, filière, année universitaire)."""
+    """Programme / filière (ex. SDIA) — contient des semestres."""
 
     name = models.CharField(max_length=100, verbose_name="Nom de la classe")
-    level = models.CharField(max_length=50, verbose_name="Niveau")
-    field = models.CharField(max_length=100, verbose_name="Filière")
-    academic_year = models.CharField(max_length=20, verbose_name="Année universitaire")
+    code = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        verbose_name="Code",
+        help_text="Ex. SDIA",
+    )
+    level = models.CharField(max_length=50, verbose_name="Niveau", blank=True, default="")
+    field = models.CharField(max_length=100, verbose_name="Filière", blank=True, default="")
+    academic_year = models.CharField(
+        max_length=20, verbose_name="Année universitaire", blank=True, default=""
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -99,7 +121,74 @@ class Classe(models.Model):
         verbose_name_plural = "Classes"
 
     def __str__(self):
-        return f"{self.name} — {self.field} ({self.academic_year})"
+        label = self.code or self.name
+        if self.academic_year:
+            return f"{label} ({self.academic_year})"
+        return label
+
+
+class Semester(models.Model):
+    """Semestre rattaché à une classe (ex. S5, S6)."""
+
+    classe = models.ForeignKey(
+        Classe,
+        on_delete=models.CASCADE,
+        related_name="semesters",
+        verbose_name="Classe",
+    )
+    code = models.CharField(max_length=20, verbose_name="Code semestre")
+    name = models.CharField(max_length=100, blank=True, default="", verbose_name="Libellé")
+    order = models.PositiveSmallIntegerField(default=0, verbose_name="Ordre")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "class_semesters"
+        ordering = ["order", "code"]
+        verbose_name = "Semestre"
+        verbose_name_plural = "Semestres"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["classe", "code"], name="uniq_semester_code_per_classe"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.classe} — {self.code}"
+
+
+class Module(models.Model):
+    """Module rattaché à un semestre, assigné à un enseignant."""
+
+    semester = models.ForeignKey(
+        Semester,
+        on_delete=models.CASCADE,
+        related_name="modules",
+        verbose_name="Semestre",
+    )
+    name = models.CharField(max_length=200, verbose_name="Nom du module")
+    code = models.CharField(max_length=50, blank=True, default="", verbose_name="Code")
+    teacher = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="teaching_modules",
+        verbose_name="Enseignant",
+        limit_choices_to=models.Q(role="teacher")
+        | models.Q(role="admin", is_also_teacher=True),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "class_modules"
+        ordering = ["name"]
+        verbose_name = "Module"
+        verbose_name_plural = "Modules"
+
+    def __str__(self):
+        return f"{self.name} ({self.semester.code})"
+
+    @property
+    def classe(self):
+        return self.semester.classe
 
 
 class Student(models.Model):

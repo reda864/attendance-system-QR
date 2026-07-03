@@ -12,12 +12,14 @@ from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .models import Classe, Student, User
+from .models import Classe, Module, Semester, Student, User
 from .permissions import IsAdmin, IsAdminOrTeacher
 from .roles import acting_as_teacher, get_active_role
 from .serializers import (
     ClasseSerializer,
     LoginSerializer,
+    ModuleSerializer,
+    SemesterSerializer,
     StudentSerializer,
     SwitchRoleSerializer,
     UserCreateSerializer,
@@ -137,8 +139,57 @@ class ClasseViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if acting_as_teacher(user):
             return qs.filter(
-                Q(teachers=user) | Q(sessions__teacher=user)
+                Q(semesters__modules__teacher=user) | Q(sessions__teacher=user)
             ).distinct()
+        return qs
+
+
+class SemesterViewSet(viewsets.ModelViewSet):
+    queryset = Semester.objects.select_related("classe").order_by(
+        "classe__name", "order", "code"
+    )
+    serializer_class = SemesterSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated(), IsAdminOrTeacher()]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        classe_id = self.request.query_params.get("classe")
+        if classe_id:
+            qs = qs.filter(classe_id=classe_id)
+        user = self.request.user
+        if acting_as_teacher(user):
+            qs = qs.filter(modules__teacher=user).distinct()
+        return qs
+
+
+class ModuleViewSet(viewsets.ModelViewSet):
+    queryset = Module.objects.select_related(
+        "semester__classe", "teacher"
+    ).order_by("semester__classe__name", "semester__order", "name")
+    serializer_class = ModuleSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated(), IsAdminOrTeacher()]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        semester_id = self.request.query_params.get("semester")
+        classe_id = self.request.query_params.get("classe")
+        if semester_id:
+            qs = qs.filter(semester_id=semester_id)
+        if classe_id:
+            qs = qs.filter(semester__classe_id=classe_id)
+        user = self.request.user
+        if acting_as_teacher(user):
+            qs = qs.filter(teacher=user)
         return qs
 
 

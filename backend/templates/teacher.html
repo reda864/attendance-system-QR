@@ -69,8 +69,9 @@
                 </div>
                 <div class="modal-body">
                     <div class="field">
-                        <label>Matière</label>
-                        <input type="text" id="newSessionSubject" placeholder="Algorithmique" />
+                        <label>Module</label>
+                        <input type="text" id="newSessionModuleLabel" readonly />
+                        <input type="hidden" id="newSessionModuleId" />
                     </div>
                     <div class="field">
                         <label>Date de la séance</label>
@@ -219,8 +220,10 @@
 ═══════════════════════════════════════════════════════════ */
             let currentUser = null;
             let allClasses = [];
-            let sessionsByClasse = {};
-            let activeClasseId = null;
+            let allSemesters = [];
+            let allModules = [];
+            let sessionsByModule = {};
+            let activeModuleId = null;
             let activeSessionId = null;
             let activeSession = null;
             let qrExpiresAt = null;
@@ -271,54 +274,118 @@
             async function loadClasses() {
                 const container = document.getElementById("classesContainer");
                 try {
-                    const data = await API.apiFetch("/classes/");
-                    allClasses = Array.isArray(data)
-                        ? data
-                        : data.results || [];
+                    const [classesData, semestersData, modulesData] = await Promise.all([
+                        API.apiFetch("/classes/"),
+                        API.apiFetch("/semesters/"),
+                        API.apiFetch("/modules/"),
+                    ]);
+                    allClasses = Array.isArray(classesData) ? classesData : classesData.results || [];
+                    allSemesters = Array.isArray(semestersData) ? semestersData : semestersData.results || [];
+                    allModules = Array.isArray(modulesData) ? modulesData : modulesData.results || [];
 
                     if (!allClasses.length) {
-                        container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--muted);font-size:.88rem;">
-        ${t('noClasses')}
-      </div>`;
+                        container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--muted);font-size:.88rem;">${t('noClasses')}</div>`;
                         return;
                     }
 
-                    container.innerHTML = allClasses
-                        .map(
-                            (c) => `
+                    const semestersFor = (classeId) =>
+                        allSemesters.filter((s) => s.classe === classeId);
+                    const modulesFor = (semesterId) =>
+                        allModules.filter((m) => m.semester === semesterId);
+
+                    container.innerHTML = allClasses.map((c) => {
+                        const label = c.code ? `${esc(c.code)} — ${esc(c.name)}` : esc(c.name);
+                        const sems = semestersFor(c.id);
+                        return `
       <div class="course-item" id="classe-item-${c.id}">
         <div class="course-header" data-classe-id="${c.id}">
           <div class="course-info">
-            <div class="course-title">${esc(c.name)}</div>
-            <div class="course-code">${esc(c.field)} · ${esc(c.level)}</div>
+            <div class="course-title">${label}</div>
+            <div class="course-code">${esc(c.field || "")}</div>
           </div>
           <span class="chevron">›</span>
         </div>
-        <div class="sessions-list" id="sessions-${c.id}">
-          <div class="sessions-list-header">
-            <span>${t('sessions')}</span>
-            <button class="btn sm" onclick="openNewSessionModal(${c.id})">+ ${t('newSession')}</button>
-          </div>
-          <div id="session-items-${c.id}">
-            <div class="session-item" style="justify-content:center;color:var(--muted);font-size:.82rem;">${t('loading')}</div>
-          </div>
+        <div class="sessions-list" id="semesters-${c.id}">
+          ${sems.length ? sems.map((s) => `
+            <div class="semester-block" id="semester-block-${s.id}">
+              <div class="course-header semester-header" data-semester-id="${s.id}" data-classe-id="${c.id}" style="margin:.35rem 0;padding:.5rem .65rem;background:var(--surface2);border-radius:8px;">
+                <div class="course-info">
+                  <div class="course-title" style="font-size:.9rem">${esc(s.code)}${s.name ? ` — ${esc(s.name)}` : ""}</div>
+                </div>
+                <span class="chevron">›</span>
+              </div>
+              <div class="sessions-list nested-list" id="modules-${s.id}" style="margin-left:.5rem">
+                ${modulesFor(s.id).map((m) => `
+                  <div class="module-block" id="module-block-${m.id}">
+                    <div class="course-header module-header" data-module-id="${m.id}" data-classe-id="${c.id}" style="margin:.25rem 0;padding:.45rem .6rem;background:var(--accent-soft);border-radius:8px;">
+                      <div class="course-info">
+                        <div class="course-title" style="font-size:.85rem">${esc(m.name)}</div>
+                      </div>
+                      <span class="chevron">›</span>
+                    </div>
+                    <div class="sessions-list nested-list open" id="sessions-${m.id}" style="margin-left:.5rem">
+                      <div class="sessions-list-header">
+                        <span>${t('sessions')}</span>
+                        <button class="btn sm" type="button" onclick="openNewSessionModal(${m.id})">+ ${t('newSession')}</button>
+                      </div>
+                      <div id="session-items-${m.id}">
+                        <div class="session-item" style="justify-content:center;color:var(--muted);font-size:.82rem;">${t('loading')}</div>
+                      </div>
+                    </div>
+                  </div>
+                `).join("") || `<div class="session-item" style="color:var(--muted);font-size:.82rem;">Aucun module assigné.</div>`}
+              </div>
+            </div>
+          `).join("") : `<div class="session-item" style="color:var(--muted);font-size:.82rem;">Aucun semestre.</div>`}
         </div>
-      </div>
-    `,
-                        )
-                        .join("");
+      </div>`;
+                    }).join("");
 
-                    document
-                        .querySelectorAll(".course-header")
-                        .forEach((hdr) => {
-                            hdr.addEventListener("click", () =>
-                                toggleClasse(Number(hdr.dataset.classeId)),
-                            );
+                    document.querySelectorAll(".course-header[data-classe-id]:not(.semester-header):not(.module-header)").forEach((hdr) => {
+                        hdr.addEventListener("click", () => toggleClasse(Number(hdr.dataset.classeId)));
+                    });
+                    document.querySelectorAll(".semester-header").forEach((hdr) => {
+                        hdr.addEventListener("click", (e) => {
+                            e.stopPropagation();
+                            toggleSemester(Number(hdr.dataset.semesterId));
                         });
+                    });
+                    document.querySelectorAll(".module-header").forEach((hdr) => {
+                        hdr.addEventListener("click", (e) => {
+                            e.stopPropagation();
+                            toggleModule(Number(hdr.dataset.moduleId));
+                        });
+                    });
                 } catch (e) {
-                    container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--red);font-size:.88rem;">
-      ${t('failedLoad')}: ${e.message}
-    </div>`;
+                    container.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--red);font-size:.88rem;">${t('failedLoad')}: ${e.message}</div>`;
+                }
+            }
+
+            function toggleSemester(semesterId) {
+                const list = document.getElementById(`modules-${semesterId}`);
+                const hdr = document.querySelector(`.semester-header[data-semester-id="${semesterId}"]`);
+                if (!list || !hdr) return;
+                const isOpen = list.classList.contains("open");
+                list.classList.toggle("open", !isOpen);
+                hdr.classList.toggle("active", !isOpen);
+            }
+
+            function toggleModule(moduleId) {
+                const list = document.getElementById(`sessions-${moduleId}`);
+                const hdr = document.querySelector(`.module-header[data-module-id="${moduleId}"]`);
+                if (!list || !hdr) return;
+                const isOpen = list.classList.contains("open");
+                document.querySelectorAll(".sessions-list.nested-list").forEach((l) => {
+                    if (l.id.startsWith("sessions-")) l.classList.remove("open");
+                });
+                document.querySelectorAll(".module-header").forEach((h) => h.classList.remove("active"));
+                if (!isOpen) {
+                    list.classList.add("open");
+                    hdr.classList.add("active");
+                    activeModuleId = moduleId;
+                    loadSessions(moduleId);
+                } else {
+                    activeModuleId = null;
                 }
             }
 
@@ -327,26 +394,26 @@
                 if (!raw) return false;
 
                 try {
-                    const { sessionId, classeId } = JSON.parse(raw);
-                    if (!sessionId || !classeId) return false;
+                    const { sessionId, moduleId } = JSON.parse(raw);
+                    if (!sessionId || !moduleId) return false;
 
-                    const hdr = document.querySelector(
-                        `.course-header[data-classe-id="${classeId}"]`,
-                    );
-                    const list = document.getElementById(`sessions-${classeId}`);
-                    if (!hdr || !list) return false;
+                    const mod = allModules.find((m) => m.id === moduleId);
+                    if (!mod) return false;
 
-                    document
-                        .querySelectorAll(".sessions-list")
-                        .forEach((l) => l.classList.remove("open"));
-                    document
-                        .querySelectorAll(".course-header")
-                        .forEach((h) => h.classList.remove("active"));
-                    hdr.classList.add("active");
-                    list.classList.add("open");
-                    activeClasseId = classeId;
-                    await loadSessions(classeId);
-                    selectSession(sessionId, classeId);
+                    const semList = document.getElementById(`semesters-${mod.classe_id}`);
+                    const modList = document.getElementById(`modules-${mod.semester}`);
+                    const sessList = document.getElementById(`sessions-${moduleId}`);
+                    if (!semList || !modList || !sessList) return false;
+
+                    document.querySelectorAll(".sessions-list").forEach((l) => l.classList.remove("open"));
+                    document.querySelectorAll(".course-header").forEach((h) => h.classList.remove("active"));
+                    semList.classList.add("open");
+                    modList.classList.add("open");
+                    sessList.classList.add("open");
+                    document.querySelector(`.module-header[data-module-id="${moduleId}"]`)?.classList.add("active");
+                    activeModuleId = moduleId;
+                    await loadSessions(moduleId);
+                    selectSession(sessionId, moduleId);
                     return true;
                 } catch {
                     sessionStorage.removeItem("teacherActiveSession");
@@ -356,43 +423,37 @@
 
             function toggleClasse(classeId) {
                 const hdr = document.querySelector(
-                    `.course-header[data-classe-id="${classeId}"]`,
+                    `.course-header[data-classe-id="${classeId}"]:not(.semester-header):not(.module-header)`,
                 );
-                const list = document.getElementById(`sessions-${classeId}`);
-                const isOpen = list.classList.contains("open");
+                const list = document.getElementById(`semesters-${classeId}`);
+                const isOpen = list?.classList.contains("open");
 
-                document
-                    .querySelectorAll(".sessions-list")
-                    .forEach((l) => l.classList.remove("open"));
-                document
-                    .querySelectorAll(".course-header")
-                    .forEach((h) => h.classList.remove("active"));
+                document.querySelectorAll(".sessions-list").forEach((l) => {
+                    if (l.id.startsWith("semesters-")) l.classList.remove("open");
+                });
+                document.querySelectorAll(".course-header").forEach((h) => h.classList.remove("active"));
 
-                if (!isOpen) {
+                if (!isOpen && list && hdr) {
                     hdr.classList.add("active");
                     list.classList.add("open");
-                    activeClasseId = classeId;
-                    loadSessions(classeId);
-                } else {
-                    activeClasseId = null;
                 }
             }
 
             /* ═══════════════════════════════════════════════════════════
    SESSIONS
 ═══════════════════════════════════════════════════════════ */
-            async function loadSessions(classeId) {
+            async function loadSessions(moduleId) {
                 const container = document.getElementById(
-                    `session-items-${classeId}`,
+                    `session-items-${moduleId}`,
                 );
                 try {
                     const data = await API.apiFetch(
-                        `/sessions/?classe=${classeId}`,
+                        `/sessions/?module=${moduleId}`,
                     );
                     const sessions = Array.isArray(data)
                         ? data
                         : data.results || [];
-                    sessionsByClasse[classeId] = sessions;
+                    sessionsByModule[moduleId] = sessions;
 
                     if (!sessions.length) {
                         container.innerHTML = `<div class="session-item" style="justify-content:center;color:var(--muted);font-size:.82rem;">
@@ -407,7 +468,7 @@
       <div class="session-item ${activeSessionId === s.id ? "selected" : ""}"
            id="session-item-${s.id}"
            data-session-id="${s.id}"
-           data-classe-id="${classeId}">
+           data-module-id="${moduleId}">
         <div>
           <div class="session-date">📅 ${formatDate(s.date)} · ${formatSessionWindow(s)}</div>
           <div class="session-id">${esc(s.subject)}</div>
@@ -422,8 +483,8 @@
                         .forEach((item) => {
                             item.addEventListener("click", () => {
                                 const sid = Number(item.dataset.sessionId);
-                                const cid = Number(item.dataset.classeId);
-                                selectSession(sid, cid);
+                                const mid = Number(item.dataset.moduleId);
+                                selectSession(sid, mid);
                             });
                         });
                 } catch (e) {
@@ -436,13 +497,17 @@
             /* ═══════════════════════════════════════════════════════════
    NEW SESSION MODAL
 ═══════════════════════════════════════════════════════════ */
-            let newSessionTargetClasseId = null;
+            let newSessionTargetModuleId = null;
 
-            function openNewSessionModal(classeId) {
-                newSessionTargetClasseId = classeId;
+            function openNewSessionModal(moduleId) {
+                const mod = allModules.find((m) => m.id === moduleId);
+                newSessionTargetModuleId = moduleId;
+                document.getElementById("newSessionModuleId").value = moduleId;
+                document.getElementById("newSessionModuleLabel").value = mod
+                    ? `${mod.classe_name || ""} / ${mod.semester_code || ""} / ${mod.name}`
+                    : `Module #${moduleId}`;
                 const today = new Date().toISOString().split("T")[0];
                 document.getElementById("newSessionDate").value = today;
-                document.getElementById("newSessionSubject").value = "";
                 document.getElementById("newSessionStartTime").value = "14:00";
                 document.getElementById("newSessionEndTime").value = "16:00";
                 openModal("modalNewSession");
@@ -453,14 +518,13 @@
                 .addEventListener("click", async () => {
                     const date =
                         document.getElementById("newSessionDate").value;
-                    const subject =
-                        document.getElementById("newSessionSubject").value.trim();
+                    const module = Number(document.getElementById("newSessionModuleId").value);
                     const start_time =
                         document.getElementById("newSessionStartTime").value;
                     const end_time =
                         document.getElementById("newSessionEndTime").value;
-                    if (!date || !subject || !start_time || !end_time) {
-                        showToast("Matière, date et horaires obligatoires.", "error");
+                    if (!date || !module || !start_time || !end_time) {
+                        showToast("Module, date et horaires obligatoires.", "error");
                         return;
                     }
                     if (end_time <= start_time) {
@@ -472,8 +536,7 @@
                         const session = await API.apiFetch("/sessions/", {
                             method: "POST",
                             body: JSON.stringify({
-                                classe: newSessionTargetClasseId,
-                                subject,
+                                module,
                                 date,
                                 start_time,
                                 end_time,
@@ -481,8 +544,8 @@
                         });
                         closeModal("modalNewSession");
                         showToast("Séance créée !", "success");
-                        await loadSessions(newSessionTargetClasseId);
-                        selectSession(session.id, newSessionTargetClasseId);
+                        await loadSessions(module);
+                        selectSession(session.id, module);
                     } catch (e) {
                         showToast(`Error: ${e.message}`, "error");
                     }
@@ -658,15 +721,14 @@
             /* ═══════════════════════════════════════════════════════════
    SELECT SESSION — renders the main panel
 ═══════════════════════════════════════════════════════════ */
-            function selectSession(sessionId, classeId) {
-                // Disconnect previous session WS only
+            function selectSession(sessionId, moduleId) {
                 if (activeWS) {
                     activeWS.close();
                     activeWS = null;
                 }
 
                 activeSessionId = sessionId;
-                activeClasseId = classeId;
+                activeModuleId = moduleId;
 
                 document
                     .querySelectorAll(".session-item")
@@ -674,17 +736,20 @@
                 const el = document.getElementById(`session-item-${sessionId}`);
                 if (el) el.classList.add("selected");
 
-                const classe = allClasses.find((c) => c.id === classeId);
-                const sessions = sessionsByClasse[classeId] || [];
+                const mod = allModules.find((m) => m.id === moduleId);
+                const sessions = sessionsByModule[moduleId] || [];
                 const session = sessions.find((s) => s.id === sessionId);
                 activeSession = session || null;
 
                 sessionStorage.setItem(
                     "teacherActiveSession",
-                    JSON.stringify({ sessionId, classeId }),
+                    JSON.stringify({ sessionId, moduleId }),
                 );
 
-                renderSessionPanel(session, classe);
+                const classe = mod
+                    ? allClasses.find((c) => c.id === mod.classe_id)
+                    : null;
+                renderSessionPanel(session, classe, mod);
                 loadAttendance(sessionId);
                 connectWS(sessionId);
 
@@ -693,17 +758,20 @@
                 }
             }
 
-            function renderSessionPanel(session, classe) {
+            function renderSessionPanel(session, classe, mod) {
                 const mainPanel = document.getElementById("mainPanel");
                 const canGenQR = sessionCanGenerateQr(session);
                 const windowNotice = canGenQR
                     ? ""
                     : `<div class="session-window-notice" style="margin-bottom:1rem;padding:.75rem 1rem;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);font-size:.85rem;color:var(--muted)">${esc(getSessionWindowNotice(session))}</div>`;
+                const moduleLine = mod
+                    ? `${esc(mod.semester_code || "")} · ${esc(mod.name)}`
+                    : esc(session?.subject || "");
                 mainPanel.innerHTML = `
     <div class="session-detail-header">
       <div class="session-detail-title">
         <h1>${esc(session?.subject || "Séance")}</h1>
-        <p>🏫 ${esc(classe?.name || '')} &nbsp;·&nbsp; 📅 ${formatDate(session?.date)} &nbsp;·&nbsp; 🕐 ${formatSessionWindow(session)}</p>
+        <p>🏫 ${esc(classe?.name || '')} &nbsp;·&nbsp; 📚 ${moduleLine} &nbsp;·&nbsp; 📅 ${formatDate(session?.date)} &nbsp;·&nbsp; 🕐 ${formatSessionWindow(session)}</p>
       </div>
       <div class="action-row">
         ${canGenQR

@@ -38,6 +38,15 @@ class Session(models.Model):
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    module = models.ForeignKey(
+        "users.Module",
+        on_delete=models.PROTECT,
+        related_name="sessions",
+        null=True,
+        blank=True,
+        verbose_name="Module",
+        db_column="class_module_id",
+    )
 
     class Meta:
         db_table = "sessions"
@@ -103,11 +112,20 @@ class Session(models.Model):
             return False
         return now < self.qr_expires_at
 
+    def save(self, *args, **kwargs):
+        if self.module_id:
+            self.subject = self.module.name
+            self.teacher = self.module.teacher
+            self.classe = self.module.semester.classe
+        super().save(*args, **kwargs)
+
     def teacher_can_manage(self, user) -> bool:
         if acting_as_admin(user):
             return True
         if not acting_as_teacher(user):
             return False
+        if self.module_id and self.module.teacher_id == user.id:
+            return True
         if self.teacher_id == user.id:
             return True
-        return self.classe_id in user.get_assigned_class_ids()
+        return False

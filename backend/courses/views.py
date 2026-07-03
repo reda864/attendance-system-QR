@@ -12,7 +12,6 @@ from rest_framework.response import Response
 
 from config.site_url import build_attend_url
 from users.permissions import IsAdmin, IsAdminOrTeacher
-
 from users.roles import acting_as_teacher
 
 from .models import Session
@@ -27,11 +26,16 @@ class SessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = Session.objects.select_related("teacher", "classe").all()
+        qs = Session.objects.select_related(
+            "teacher", "classe", "module__semester__classe"
+        ).all()
 
         if acting_as_teacher(user):
             qs = qs.filter(teacher=user)
 
+        module_id = self.request.query_params.get("module")
+        if module_id:
+            qs = qs.filter(module_id=module_id)
         classe_id = self.request.query_params.get("classe")
         if classe_id:
             qs = qs.filter(classe_id=classe_id)
@@ -42,13 +46,10 @@ class SessionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if acting_as_teacher(user):
-            session = serializer.save(teacher=user)
-        else:
-            session = serializer.save()
-        teacher = session.teacher
-        if teacher.is_teacher_capable:
-            teacher.assigned_classes.add(session.classe)
+        module = serializer.validated_data["module"]
+        if acting_as_teacher(user) and module.teacher_id != user.id:
+            raise PermissionError("Forbidden module.")
+        serializer.save()
 
     def _check_session_access(self, request, session):
         if not session.teacher_can_manage(request.user):
@@ -110,12 +111,13 @@ class SessionViewSet(viewsets.ModelViewSet):
             return Response({"error": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
 
         if acting_as_teacher(request.user):
-            if session.teacher_id != request.user.id:
-                if not session.classe.teachers.filter(pk=request.user.pk).exists():
-                    return Response(
-                        {"error": "Vous ne pouvez générer un QR que pour vos classes."},
-                        status=status.HTTP_403_FORBIDDEN,
-                    )
+            if session.teacher_id != request.user.id and not (
+                session.module_id and session.module.teacher_id == request.user.id
+            ):
+                return Response(
+                    {"error": "Vous ne pouvez générer un QR que pour vos modules."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         if not session.can_generate_qr:
             current = timezone.now()

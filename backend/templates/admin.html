@@ -186,29 +186,15 @@
   <!-- CLASSES PANEL -->
   <div class="tab-panel" id="tab-classes">
     <div class="section-head">
-      <h2>Toutes les classes</h2>
+      <h2>Structure académique</h2>
+      <p style="font-size:.88rem;color:var(--muted);margin-top:.25rem;">Classe → Semestres → Modules (enseignant par module)</p>
       <div class="section-actions">
-        <input type="search" class="search-input" id="searchClasses" placeholder="Rechercher nom, niveau, filière…" />
+        <input type="search" class="search-input" id="searchClasses" placeholder="Rechercher classe, semestre, module…" />
         <button class="btn" id="btnOpenAddClasse">+ Nouvelle classe</button>
       </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Nom</th>
-            <th>Niveau</th>
-            <th>Filière</th>
-            <th>Année</th>
-            <th>Étudiants</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="classesBody">
-          <tr class="empty-row"><td colspan="7">Chargement…</td></tr>
-        </tbody>
-      </table>
+    <div id="classesTree" class="academic-tree">
+      <div class="sidebar-loading">Chargement…</div>
     </div>
   </div>
 
@@ -278,16 +264,12 @@
           Aussi enseignant (peut basculer vers le mode enseignant)
         </label>
       </div>
+      <p id="uTeacherHint" style="display:none;font-size:.82rem;color:var(--muted);">
+        Les enseignants sont assignés via les <strong>modules</strong> (onglet Classes).
+      </p>
       <div class="field">
         <label>Mot de passe</label>
         <input type="password" id="uPassword" placeholder="••••••••" />
-      </div>
-      <div class="field" id="uClassesWrap">
-        <label>Classes assignées (enseignant)</label>
-        <select id="uClasses" multiple size="4"></select>
-        <p style="font-size:0.78rem;color:var(--muted);margin-top:0.35rem;">
-          Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs classes.
-        </p>
       </div>
     </div>
     <div class="modal-footer">
@@ -384,10 +366,6 @@
           Aussi enseignant (peut basculer vers le mode enseignant)
         </label>
       </div>
-      <div class="field" id="euClassesWrap">
-        <label>Classes assignées (enseignant)</label>
-        <select id="euClasses" multiple size="4"></select>
-      </div>
       <div class="field"><label>Nouveau mot de passe (optionnel)</label><input type="password" id="euPassword" /></div>
     </div>
     <div class="modal-footer">
@@ -406,9 +384,14 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="clId" />
-      <div class="field"><label>Nom</label><input type="text" id="clName" placeholder="Groupe A" /></div>
-      <div class="field"><label>Niveau</label><input type="text" id="clLevel" placeholder="Licence 3" /></div>
-      <div class="field"><label>Filière</label><input type="text" id="clField" placeholder="Informatique" /></div>
+      <div class="field-row">
+        <div class="field"><label>Nom</label><input type="text" id="clName" placeholder="Sciences des Données et IA" /></div>
+        <div class="field"><label>Code</label><input type="text" id="clCode" placeholder="SDIA" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Niveau</label><input type="text" id="clLevel" placeholder="Licence" /></div>
+        <div class="field"><label>Filière</label><input type="text" id="clField" placeholder="Informatique" /></div>
+      </div>
       <div class="field"><label>Année universitaire</label><input type="text" id="clYear" placeholder="2025-2026" /></div>
     </div>
     <div class="modal-footer">
@@ -426,14 +409,9 @@
       <button class="modal-close" data-close="modalAddSession">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field"><label>Matière</label><input type="text" id="sessSubject" placeholder="Algorithmique" /></div>
       <div class="field">
-        <label>Classe</label>
-        <select id="sessClasse"><option value="">— Chargement… —</option></select>
-      </div>
-      <div class="field">
-        <label>Enseignant</label>
-        <select id="sessTeacher"><option value="">— Chargement… —</option></select>
+        <label>Module</label>
+        <select id="sessModule"><option value="">— Chargement… —</option></select>
       </div>
       <div class="field"><label>Date</label><input type="date" id="sessDate" /></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
@@ -444,6 +422,55 @@
     <div class="modal-footer">
       <button class="btn outline" data-close="modalAddSession">Annuler</button>
       <button class="btn" id="btnSubmitSession">Créer la séance</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Semester ── -->
+<div class="modal-backdrop" id="modalSemester">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalSemesterTitle">Nouveau semestre</h3>
+      <button class="modal-close" data-close="modalSemester">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="semId" />
+      <input type="hidden" id="semClasseId" />
+      <div class="field-row">
+        <div class="field"><label>Code</label><input type="text" id="semCode" placeholder="S5" /></div>
+        <div class="field"><label>Ordre</label><input type="number" id="semOrder" value="0" min="0" /></div>
+      </div>
+      <div class="field"><label>Libellé (optionnel)</label><input type="text" id="semName" placeholder="Semestre 5" /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" data-close="modalSemester">Annuler</button>
+      <button class="btn" id="btnSubmitSemester">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Module ── -->
+<div class="modal-backdrop" id="modalModule">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalModuleTitle">Nouveau module</h3>
+      <button class="modal-close" data-close="modalModule">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="modId" />
+      <input type="hidden" id="modSemesterId" />
+      <div class="field-row">
+        <div class="field"><label>Nom du module</label><input type="text" id="modName" placeholder="Machine Learning" /></div>
+        <div class="field"><label>Code (optionnel)</label><input type="text" id="modCode" placeholder="ML101" /></div>
+      </div>
+      <div class="field">
+        <label>Enseignant</label>
+        <select id="modTeacher"><option value="">— Chargement… —</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" data-close="modalModule">Annuler</button>
+      <button class="btn" id="btnSubmitModule">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -474,6 +501,8 @@
   let allUsers    = [];
   let allStudents = [];
   let allClasses  = [];
+  let allSemesters = [];
+  let allModules  = [];
   let allSessions = [];
   let allAttendance = [];
   let adminLiveWS = null;
@@ -494,7 +523,8 @@
   }
 
   async function loadAll() {
-    await Promise.all([loadUsers(), loadClasses(), loadStudents(), loadSessions()]);
+    await loadUsers();
+    await Promise.all([loadClasses(), loadStudents(), loadSessions()]);
     await loadAttendance();
     connectAdminLiveWS();
   }
@@ -514,23 +544,12 @@
     }
   }
 
-  function userCanAssignClasses(role, isAlsoTeacher) {
-    return role === 'teacher' || (role === 'admin' && isAlsoTeacher);
-  }
-
-  function syncUserClassFields(prefix) {
+  function syncUserRoleFields(prefix) {
     const role = document.getElementById(`${prefix}Role`).value;
-    const isAlsoTeacher = document.getElementById(`${prefix}AlsoTeacher`)?.checked || false;
     const alsoWrap = document.getElementById(`${prefix}AlsoTeacherWrap`);
-    const classesWrap = document.getElementById(`${prefix}ClassesWrap`);
+    const hint = document.getElementById(prefix === 'u' ? 'uTeacherHint' : null);
     if (alsoWrap) alsoWrap.style.display = role === 'admin' ? 'block' : 'none';
-    if (classesWrap) {
-      classesWrap.style.display = userCanAssignClasses(role, isAlsoTeacher) ? 'block' : 'none';
-    }
-  }
-
-  function collectAssignedClassIds(selectId) {
-    return Array.from(document.getElementById(selectId).selectedOptions).map(o => Number(o.value));
+    if (hint) hint.style.display = (role === 'teacher' || role === 'admin') ? 'block' : 'none';
   }
 
   const roleLabel = { admin: 'Admin', teacher: 'Enseignant', student: 'Étudiant' };
@@ -573,11 +592,7 @@
     document.getElementById('euRole').value = u.role;
     document.getElementById('euAlsoTeacher').checked = !!u.is_also_teacher;
     document.getElementById('euPassword').value = '';
-    populateTeacherClassSelect('euClasses');
-    const sel = document.getElementById('euClasses');
-    const assigned = u.assigned_class_ids || [];
-    Array.from(sel.options).forEach(o => { o.selected = assigned.includes(Number(o.value)) || assigned.includes(o.value); });
-    syncUserClassFields('eu');
+    syncUserRoleFields('eu');
     openModal('modalEditUser');
   }
 
@@ -645,63 +660,196 @@
 
   async function loadClasses() {
     try {
-      const data = await API.apiFetch('/classes/');
-      allClasses = Array.isArray(data) ? data : (data.results || []);
-      renderClasses();
+      const [classesData, semestersData, modulesData] = await Promise.all([
+        API.apiFetch('/classes/'),
+        API.apiFetch('/semesters/'),
+        API.apiFetch('/modules/'),
+      ]);
+      allClasses = Array.isArray(classesData) ? classesData : (classesData.results || []);
+      allSemesters = Array.isArray(semestersData) ? semestersData : (semestersData.results || []);
+      allModules = Array.isArray(modulesData) ? modulesData : (modulesData.results || []);
+      renderClassesTree();
       document.getElementById('cntClasses').textContent = allClasses.length;
       const heroC = document.getElementById('heroClassCount');
       if (heroC) heroC.textContent = allClasses.length;
       populateClasseSelects();
+      populateModuleSelect();
+      populateTeacherSelect('modTeacher');
     } catch (e) {
-      document.getElementById('classesBody').innerHTML =
-        `<tr class="empty-row"><td colspan="7">Erreur: ${esc(e.message)}</td></tr>`;
+      document.getElementById('classesTree').innerHTML =
+        `<div class="sidebar-loading" style="color:var(--red)">Erreur: ${esc(e.message)}</div>`;
     }
+  }
+
+  function semestersForClasse(classeId) {
+    return allSemesters.filter(s => s.classe === classeId || s.classe_id === classeId);
+  }
+
+  function modulesForSemester(semesterId) {
+    return allModules.filter(m => m.semester === semesterId);
+  }
+
+  function renderClassesTree() {
+    const container = document.getElementById('classesTree');
+    const query = searchQuery('searchClasses');
+    const filtered = allClasses.filter(c => {
+      if (matchesQuery(query, c.name, c.code, c.field, c.level, c.academic_year)) return true;
+      const sems = semestersForClasse(c.id);
+      return sems.some(s => {
+        if (matchesQuery(query, s.code, s.name)) return true;
+        return modulesForSemester(s.id).some(m =>
+          matchesQuery(query, m.name, m.code, m.teacher_name)
+        );
+      });
+    });
+
+    if (!filtered.length) {
+      container.innerHTML = `<div class="sidebar-loading">${query ? 'Aucun résultat.' : 'Aucune classe. Créez une classe (ex. SDIA).'}</div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(c => {
+      const sems = semestersForClasse(c.id);
+      const label = c.code ? `${esc(c.code)} — ${esc(c.name)}` : esc(c.name);
+      return `
+        <div class="academic-class">
+          <div class="academic-class-head">
+            <div>
+              <strong>${label}</strong>
+              <div class="academic-meta">${esc(c.field || '—')} · ${c.semester_count ?? sems.length} sem. · ${c.module_count ?? '—'} mod. · ${c.student_count ?? 0} étud.</div>
+            </div>
+            <div class="academic-actions">
+              <button class="btn sm outline" onclick="openAddSemester(${c.id})">+ Semestre</button>
+              <button class="btn sm outline" onclick="openEditClasse(${c.id})">Modifier</button>
+              <button class="btn sm outline" style="color:var(--red)" onclick="deleteClasse(${c.id})">Supprimer</button>
+            </div>
+          </div>
+          <div class="academic-children">
+            ${sems.length ? sems.map(s => `
+              <div class="academic-semester">
+                <div class="academic-semester-head">
+                  <span><strong>${esc(s.code)}</strong>${s.name ? ` — ${esc(s.name)}` : ''}</span>
+                  <div class="academic-actions">
+                    <button class="btn sm outline" onclick="openAddModule(${s.id})">+ Module</button>
+                    <button class="btn sm outline" onclick="openEditSemester(${s.id})">Modifier</button>
+                    <button class="btn sm outline" style="color:var(--red)" onclick="deleteSemester(${s.id})">Supprimer</button>
+                  </div>
+                </div>
+                <div class="academic-modules">
+                  ${modulesForSemester(s.id).length ? modulesForSemester(s.id).map(m => `
+                    <div class="academic-module">
+                      <span>${esc(m.name)}${m.code ? ` <span class="academic-code">(${esc(m.code)})</span>` : ''}</span>
+                      <span class="academic-teacher">👤 ${esc(m.teacher_name || teacherName(m.teacher))}</span>
+                      <div class="academic-actions">
+                        <button class="btn sm outline" onclick="openEditModule(${m.id})">Modifier</button>
+                        <button class="btn sm outline" style="color:var(--red)" onclick="deleteModule(${m.id})">Supprimer</button>
+                      </div>
+                    </div>
+                  `).join('') : '<div class="academic-empty">Aucun module — ajoutez un module et assignez un enseignant.</div>'}
+                </div>
+              </div>
+            `).join('') : '<div class="academic-empty">Aucun semestre — cliquez « + Semestre » (ex. S5, S6).</div>'}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   function renderClasses() {
-    const tbody = document.getElementById('classesBody');
-    const query = searchQuery('searchClasses');
-    const filtered = allClasses.filter(c => matchesQuery(
-      query,
-      c.name, c.level, c.field, c.academic_year, c.student_count
-    ));
-    if (!filtered.length) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${query ? 'Aucun résultat.' : 'Aucune classe.'}</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = filtered.map((c, i) => `
-      <tr>
-        <td><span style="color:var(--muted)">${i + 1}</span></td>
-        <td><strong>${esc(c.name)}</strong></td>
-        <td>${esc(c.level)}</td>
-        <td>${esc(c.field)}</td>
-        <td>${esc(c.academic_year)}</td>
-        <td>${c.student_count ?? '—'}</td>
-        <td>
-          <button class="btn sm outline" onclick="openEditClasse(${c.id})">Modifier</button>
-          <button class="btn sm outline" style="color:var(--red)" onclick="deleteClasse(${c.id})">Supprimer</button>
-        </td>
-      </tr>
-    `).join('');
+    renderClassesTree();
   }
 
-  function populateTeacherClassSelect(selectId) {
+  function populateTeacherSelect(selectId) {
     const sel = document.getElementById(selectId);
     if (!sel) return;
-    sel.innerHTML = allClasses.map(c =>
-      `<option value="${c.id}">${esc(c.name)} — ${esc(c.field)}</option>`
-    ).join('');
+    const teachers = allUsers.filter(u =>
+      u.role === 'teacher' || (u.role === 'admin' && u.is_also_teacher)
+    );
+    sel.innerHTML = '<option value="">— Sélectionner —</option>' +
+      teachers.map(t => `<option value="${t.id}">${esc(t.first_name)} ${esc(t.last_name)}</option>`).join('');
   }
 
   function populateClasseSelects() {
-    ['sClasse', 'sessClasse'].forEach(id => {
-      const sel = document.getElementById(id);
-      if (!sel) return;
-      const val = sel.value;
-      sel.innerHTML = '<option value="">— Sélectionner —</option>' +
-        allClasses.map(c => `<option value="${c.id}">${esc(c.name)} (${esc(c.field)})</option>`).join('');
-      sel.value = val;
-    });
+    const sel = document.getElementById('sClasse');
+    if (!sel) return;
+    const val = sel.value;
+    sel.innerHTML = '<option value="">— Sélectionner —</option>' +
+      allClasses.map(c => `<option value="${c.id}">${esc(c.code || c.name)} — ${esc(c.name)}</option>`).join('');
+    sel.value = val;
+  }
+
+  function populateModuleSelect() {
+    const sel = document.getElementById('sessModule');
+    if (!sel) return;
+    const val = sel.value;
+    sel.innerHTML = '<option value="">— Sélectionner un module —</option>' +
+      allModules.map(m =>
+        `<option value="${m.id}">${esc(m.classe_name || '')} / ${esc(m.semester_code || '')} / ${esc(m.name)} — ${esc(m.teacher_name || '')}</option>`
+      ).join('');
+    sel.value = val;
+  }
+
+  function openAddSemester(classeId) {
+    document.getElementById('semId').value = '';
+    document.getElementById('semClasseId').value = classeId;
+    document.getElementById('modalSemesterTitle').textContent = 'Nouveau semestre';
+    document.getElementById('semCode').value = '';
+    document.getElementById('semName').value = '';
+    document.getElementById('semOrder').value = semestersForClasse(classeId).length;
+    openModal('modalSemester');
+  }
+
+  function openEditSemester(id) {
+    const s = allSemesters.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('semId').value = s.id;
+    document.getElementById('semClasseId').value = s.classe;
+    document.getElementById('modalSemesterTitle').textContent = 'Modifier le semestre';
+    document.getElementById('semCode').value = s.code;
+    document.getElementById('semName').value = s.name || '';
+    document.getElementById('semOrder').value = s.order ?? 0;
+    openModal('modalSemester');
+  }
+
+  function openAddModule(semesterId) {
+    document.getElementById('modId').value = '';
+    document.getElementById('modSemesterId').value = semesterId;
+    document.getElementById('modalModuleTitle').textContent = 'Nouveau module';
+    document.getElementById('modName').value = '';
+    document.getElementById('modCode').value = '';
+    populateTeacherSelect('modTeacher');
+    openModal('modalModule');
+  }
+
+  function openEditModule(id) {
+    const m = allModules.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('modId').value = m.id;
+    document.getElementById('modSemesterId').value = m.semester;
+    document.getElementById('modalModuleTitle').textContent = 'Modifier le module';
+    document.getElementById('modName').value = m.name;
+    document.getElementById('modCode').value = m.code || '';
+    populateTeacherSelect('modTeacher');
+    document.getElementById('modTeacher').value = m.teacher;
+    openModal('modalModule');
+  }
+
+  async function deleteSemester(id) {
+    if (!confirm('Supprimer ce semestre et tous ses modules ?')) return;
+    try {
+      await API.apiFetch(`/semesters/${id}/`, { method: 'DELETE' });
+      showToast('Semestre supprimé.', 'success');
+      await loadClasses();
+    } catch (e) { showToast(e.message, 'error'); }
+  }
+
+  async function deleteModule(id) {
+    if (!confirm('Supprimer ce module ?')) return;
+    try {
+      await API.apiFetch(`/modules/${id}/`, { method: 'DELETE' });
+      showToast('Module supprimé.', 'success');
+      await loadClasses();
+    } catch (e) { showToast(e.message, 'error'); }
   }
 
   async function loadSessionsList() {
@@ -946,14 +1094,13 @@
 
   /* ── Add User ── */
   document.getElementById('btnOpenAddUser').addEventListener('click', () => {
-    populateTeacherClassSelect('uClasses');
     document.getElementById('uAlsoTeacher').checked = false;
-    syncUserClassFields('u');
+    syncUserRoleFields('u');
     openModal('modalAddUser');
   });
 
-  document.getElementById('uRole')?.addEventListener('change', () => syncUserClassFields('u'));
-  document.getElementById('uAlsoTeacher')?.addEventListener('change', () => syncUserClassFields('u'));
+  document.getElementById('uRole')?.addEventListener('change', () => syncUserRoleFields('u'));
+  document.getElementById('uAlsoTeacher')?.addEventListener('change', () => syncUserRoleFields('u'));
 
   document.getElementById('btnSubmitUser').addEventListener('click', async () => {
     const role = document.getElementById('uRole').value;
@@ -966,9 +1113,6 @@
     };
     if (role === 'admin') {
       body.is_also_teacher = document.getElementById('uAlsoTeacher').checked;
-    }
-    if (userCanAssignClasses(role, body.is_also_teacher)) {
-      body.assigned_class_ids = collectAssignedClassIds('uClasses');
     }
 
     if (!body.first_name || !body.last_name || !body.email || !body.password) {
@@ -1010,8 +1154,8 @@
     }
   });
 
-  document.getElementById('euRole')?.addEventListener('change', () => syncUserClassFields('eu'));
-  document.getElementById('euAlsoTeacher')?.addEventListener('change', () => syncUserClassFields('eu'));
+  document.getElementById('euRole')?.addEventListener('change', () => syncUserRoleFields('eu'));
+  document.getElementById('euAlsoTeacher')?.addEventListener('change', () => syncUserRoleFields('eu'));
 
   document.getElementById('btnSubmitEditUser').addEventListener('click', async () => {
     const id = document.getElementById('euId').value;
@@ -1029,9 +1173,6 @@
     } else {
       body.is_also_teacher = false;
     }
-    if (userCanAssignClasses(role, body.is_also_teacher)) {
-      body.assigned_class_ids = collectAssignedClassIds('euClasses');
-    }
     try {
       await API.apiFetch(`/users/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });
       closeModal('modalEditUser');
@@ -1043,7 +1184,7 @@
   document.getElementById('btnOpenAddClasse').addEventListener('click', () => {
     document.getElementById('clId').value = '';
     document.getElementById('modalClasseTitle').textContent = 'Nouvelle classe';
-    ['clName','clLevel','clField','clYear'].forEach(id => document.getElementById(id).value = '');
+    ['clName','clCode','clLevel','clField','clYear'].forEach(id => document.getElementById(id).value = '');
     openModal('modalClasse');
   });
 
@@ -1053,9 +1194,10 @@
     document.getElementById('clId').value = c.id;
     document.getElementById('modalClasseTitle').textContent = 'Modifier la classe';
     document.getElementById('clName').value = c.name;
-    document.getElementById('clLevel').value = c.level;
-    document.getElementById('clField').value = c.field;
-    document.getElementById('clYear').value = c.academic_year;
+    document.getElementById('clCode').value = c.code || '';
+    document.getElementById('clLevel').value = c.level || '';
+    document.getElementById('clField').value = c.field || '';
+    document.getElementById('clYear').value = c.academic_year || '';
     openModal('modalClasse');
   }
 
@@ -1063,12 +1205,13 @@
     const id = document.getElementById('clId').value;
     const body = {
       name: document.getElementById('clName').value.trim(),
+      code: document.getElementById('clCode').value.trim(),
       level: document.getElementById('clLevel').value.trim(),
       field: document.getElementById('clField').value.trim(),
       academic_year: document.getElementById('clYear').value.trim(),
     };
-    if (!body.name || !body.level || !body.field || !body.academic_year) {
-      showToast('Tous les champs sont obligatoires.', 'error'); return;
+    if (!body.name) {
+      showToast('Le nom de la classe est obligatoire.', 'error'); return;
     }
     try {
       if (id) {
@@ -1091,17 +1234,55 @@
     } catch (e) { showToast(e.message, 'error'); }
   }
 
+  document.getElementById('btnSubmitSemester').addEventListener('click', async () => {
+    const id = document.getElementById('semId').value;
+    const body = {
+      classe: Number(document.getElementById('semClasseId').value),
+      code: document.getElementById('semCode').value.trim(),
+      name: document.getElementById('semName').value.trim(),
+      order: Number(document.getElementById('semOrder').value) || 0,
+    };
+    if (!body.code) {
+      showToast('Le code semestre est obligatoire (ex. S5).', 'error'); return;
+    }
+    try {
+      if (id) {
+        await API.apiFetch(`/semesters/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });
+      } else {
+        await API.apiFetch('/semesters/', { method: 'POST', body: JSON.stringify(body) });
+      }
+      closeModal('modalSemester');
+      showToast('Semestre enregistré.', 'success');
+      await loadClasses();
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+
+  document.getElementById('btnSubmitModule').addEventListener('click', async () => {
+    const id = document.getElementById('modId').value;
+    const body = {
+      semester: Number(document.getElementById('modSemesterId').value),
+      name: document.getElementById('modName').value.trim(),
+      code: document.getElementById('modCode').value.trim(),
+      teacher: Number(document.getElementById('modTeacher').value),
+    };
+    if (!body.name || !body.teacher) {
+      showToast('Nom du module et enseignant sont obligatoires.', 'error'); return;
+    }
+    try {
+      if (id) {
+        await API.apiFetch(`/modules/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });
+      } else {
+        await API.apiFetch('/modules/', { method: 'POST', body: JSON.stringify(body) });
+      }
+      closeModal('modalModule');
+      showToast('Module enregistré.', 'success');
+      await loadClasses();
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+
   document.getElementById('btnOpenAddSession').addEventListener('click', () => {
-    const teacherSel = document.getElementById('sessTeacher');
-    teacherSel.innerHTML = '<option value="">— Sélectionner —</option>';
-    allUsers.filter(u => u.role === 'teacher').forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.id;
-      opt.textContent = `${t.first_name} ${t.last_name}`;
-      teacherSel.appendChild(opt);
-    });
     document.getElementById('sessDate').value = new Date().toISOString().split('T')[0];
-    populateClasseSelects();
+    populateModuleSelect();
     openModal('modalAddSession');
   });
 
@@ -1117,15 +1298,13 @@
 
   document.getElementById('btnSubmitSession').addEventListener('click', async () => {
     const body = {
-      subject: document.getElementById('sessSubject').value.trim(),
-      classe: document.getElementById('sessClasse').value,
-      teacher: document.getElementById('sessTeacher').value,
+      module: document.getElementById('sessModule').value,
       date: document.getElementById('sessDate').value,
       start_time: document.getElementById('sessStartTime').value,
       end_time: document.getElementById('sessEndTime').value,
     };
-    if (!body.subject || !body.classe || !body.teacher || !body.date || !body.start_time || !body.end_time) {
-      showToast('Tous les champs sont obligatoires.', 'error'); return;
+    if (!body.module || !body.date || !body.start_time || !body.end_time) {
+      showToast('Module, date et horaires sont obligatoires.', 'error'); return;
     }
     if (body.end_time <= body.start_time) {
       showToast("L'heure de fin doit être après l'heure de début.", 'error'); return;

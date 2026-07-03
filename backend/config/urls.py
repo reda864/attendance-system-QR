@@ -15,7 +15,13 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from rest_framework.routers import DefaultRouter
 
-from users.views import UserViewSet, StudentViewSet, ClasseViewSet
+from users.views import (
+    ClasseViewSet,
+    ModuleViewSet,
+    SemesterViewSet,
+    StudentViewSet,
+    UserViewSet,
+)
 from courses.views import SessionViewSet
 
 # ---------------------------------------------------------------------------
@@ -93,6 +99,8 @@ def redirect_attend_token(request, token):
 api_router = DefaultRouter()
 api_router.register("users", UserViewSet, basename="user")
 api_router.register("classes", ClasseViewSet, basename="classe")
+api_router.register("semesters", SemesterViewSet, basename="semester")
+api_router.register("modules", ModuleViewSet, basename="module")
 api_router.register("students", StudentViewSet, basename="student")
 api_router.register("sessions", SessionViewSet, basename="session")
 
