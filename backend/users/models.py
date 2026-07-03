@@ -114,6 +114,8 @@ class Student(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     code_massar = models.CharField(max_length=50, unique=True)
+    email = models.CharField(max_length=254, blank=True, default="")
+    phone = models.CharField(max_length=30, blank=True, default="")
     classe = models.ForeignKey(
         Classe,
         on_delete=models.PROTECT,

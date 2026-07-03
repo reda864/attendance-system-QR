@@ -2,8 +2,10 @@ import logging
 from typing import Type, cast
 
 from django.db.models import Q
+from django.http import FileResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
@@ -22,6 +24,7 @@ from .serializers import (
     UserSerializer,
     UserUpdateSerializer,
 )
+from .student_import import build_import_template, import_students_from_excel
 from .tokens import AppRefreshToken
 
 logger = logging.getLogger(__name__)
@@ -145,9 +148,59 @@ class StudentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrTeacher]
 
     def get_permissions(self):
-        if self.action in ("create", "update", "partial_update", "destroy"):
+        if self.action in (
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "import_excel",
+            "import_template",
+        ):
             return [IsAuthenticated(), IsAdmin()]
         return [IsAuthenticated(), IsAdminOrTeacher()]
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="import-excel",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def import_excel(self, request):
+        upload = request.FILES.get("file")
+        if not upload:
+            return Response(
+                {"error": "Aucun fichier reçu. Envoyez un fichier Excel (.xlsx)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        name = upload.name.lower()
+        if not (name.endswith(".xlsx") or name.endswith(".xls")):
+            return Response(
+                {"error": "Format non supporté. Utilisez un fichier .xlsx."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = import_students_from_excel(upload)
+        logger.info(
+            "Student import by %s: created=%s updated=%s errors=%s",
+            request.user.email,
+            result["created"],
+            result["updated"],
+            len(result["errors"]),
+        )
+        return Response(result, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="import-template")
+    def import_template(self, request):
+        buffer = build_import_template()
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename="modele_import_etudiants.xlsx",
+            content_type=(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ),
+        )
 
 
 class MeView(APIView):

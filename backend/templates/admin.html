@@ -160,6 +160,8 @@
       <h2>Tous les étudiants</h2>
       <div class="section-actions">
         <input type="search" class="search-input" id="searchStudents" placeholder="Rechercher nom, code Massar, classe…" />
+        <button class="btn outline" id="btnDownloadStudentTemplate" type="button">📥 Modèle Excel</button>
+        <button class="btn outline" id="btnOpenImportStudents" type="button">📤 Importer Excel</button>
         <button class="btn" id="btnOpenAddStudent">+ Ajouter un étudiant</button>
       </div>
     </div>
@@ -291,6 +293,31 @@
     <div class="modal-footer">
       <button class="btn outline" data-close="modalAddUser">Annuler</button>
       <button class="btn" id="btnSubmitUser">Créer l'utilisateur</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Import Students ── -->
+<div class="modal-backdrop" id="modalImportStudents">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Importer des étudiants (Excel)</h3>
+      <button type="button" class="modal-close" data-close="modalImportStudents" aria-label="Fermer">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.88rem;color:var(--muted);margin-bottom:1rem;">
+        Colonnes attendues : <strong>Nom</strong>, <strong>Prénom</strong>, <strong>Massar</strong>, <strong>Classe</strong>.
+        Le nom de la classe doit correspondre exactement à une classe existante.
+      </p>
+      <div class="field">
+        <label>Fichier Excel (.xlsx)</label>
+        <input type="file" id="importStudentsFile" accept=".xlsx,.xls" />
+      </div>
+      <div id="importStudentsResult" style="display:none;margin-top:1rem;font-size:0.85rem;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" type="button" data-close="modalImportStudents">Annuler</button>
+      <button class="btn" id="btnSubmitImportStudents" type="button">Importer</button>
     </div>
   </div>
 </div>
@@ -1114,6 +1141,76 @@
   document.getElementById('btnOpenAddStudent').addEventListener('click', () => {
     populateClasseSelects();
     openModal('modalAddStudent');
+  });
+
+  document.getElementById('btnOpenImportStudents').addEventListener('click', () => {
+    document.getElementById('importStudentsFile').value = '';
+    document.getElementById('importStudentsResult').style.display = 'none';
+    openModal('modalImportStudents');
+  });
+
+  document.getElementById('btnDownloadStudentTemplate').addEventListener('click', async () => {
+    try {
+      const blob = await API.apiFetch('/students/import-template/');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'modele_import_etudiants.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  });
+
+  document.getElementById('btnSubmitImportStudents').addEventListener('click', async () => {
+    const fileInput = document.getElementById('importStudentsFile');
+    const file = fileInput.files?.[0];
+    if (!file) {
+      showToast('Sélectionnez un fichier Excel.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmitImportStudents');
+    btn.disabled = true;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const result = await API.apiFetch('/students/import-excel/', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const resultEl = document.getElementById('importStudentsResult');
+      resultEl.style.display = 'block';
+      const errorLines = (result.errors || [])
+        .slice(0, 8)
+        .map(e => `Ligne ${e.row} : ${API.esc(e.message)}`)
+        .join('<br>');
+      const moreErrors = (result.errors || []).length > 8
+        ? `<br>… et ${result.errors.length - 8} autre(s) erreur(s).`
+        : '';
+
+      resultEl.innerHTML = `
+        <div style="padding:0.75rem;border-radius:10px;background:var(--surface2);border:1px solid var(--border);">
+          <div><strong>${result.created || 0}</strong> étudiant(s) ajouté(s)</div>
+          <div><strong>${result.updated || 0}</strong> mis à jour</div>
+          ${result.errors?.length ? `<div style="color:var(--red);margin-top:0.5rem;">${errorLines}${moreErrors}</div>` : ''}
+        </div>
+      `;
+
+      const summary = `${result.created || 0} ajouté(s), ${result.updated || 0} mis à jour`;
+      showToast(result.errors?.length ? `${summary} (${result.errors.length} erreur(s))` : summary, result.errors?.length ? 'error' : 'success');
+      await loadStudents();
+      if (!result.errors?.length) {
+        setTimeout(() => closeModal('modalImportStudents'), 1200);
+      }
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   /* ── Toast ── */
