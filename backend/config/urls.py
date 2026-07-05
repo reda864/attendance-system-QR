@@ -118,6 +118,11 @@ urlpatterns = [
     path("login/", serve_template("login.html"), name="login-page"),
     path("admin-ui/", serve_template("admin.html"), name="admin-page"),
     path("teacher/", serve_template("teacher.html"), name="teacher-page"),
+    path(
+        "teacher/export/",
+        serve_template("teacher-export.html"),
+        name="teacher-export-page",
+    ),
     path("student/", serve_template("student.html"), name="student-page"),
     path("attend/", serve_template("attend.html"), name="attend-page"),
     re_path(

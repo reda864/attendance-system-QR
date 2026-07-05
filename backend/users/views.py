@@ -198,6 +198,13 @@ class StudentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentSerializer
     permission_classes = [IsAuthenticated, IsAdminOrTeacher]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        classe_id = self.request.query_params.get("classe")
+        if classe_id:
+            qs = qs.filter(classe_id=classe_id)
+        return qs
+
     def get_permissions(self):
         if self.action in (
             "create",

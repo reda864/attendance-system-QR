@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Export personnalisé — PrésenceQR</title>
+        <link rel="stylesheet" href="/dashboard.css" />
+        <style>
+            .export-page {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 1.5rem 1.75rem 3rem;
+            }
+            .export-header {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+                flex-wrap: wrap;
+            }
+            .export-header h1 {
+                font-size: 1.5rem;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+            }
+            .export-header p {
+                color: var(--muted);
+                margin-top: 0.35rem;
+                font-size: 0.92rem;
+            }
+            .export-grid {
+                display: grid;
+                grid-template-columns: 320px 1fr;
+                gap: 1.25rem;
+                align-items: start;
+            }
+            @media (max-width: 960px) {
+                .export-grid { grid-template-columns: 1fr; }
+            }
+            .panel {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 1.25rem;
+                box-shadow: var(--shadow-sm);
+            }
+            .panel h2 {
+                font-size: 0.95rem;
+                font-weight: 700;
+                margin-bottom: 1rem;
+            }
+            .panel-section {
+                margin-bottom: 1.25rem;
+                padding-bottom: 1.25rem;
+                border-bottom: 1px solid var(--border);
+            }
+            .panel-section:last-child {
+                margin-bottom: 0;
+                padding-bottom: 0;
+                border-bottom: none;
+            }
+            .radio-group {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                margin-bottom: 0.75rem;
+            }
+            .radio-group label {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.88rem;
+                cursor: pointer;
+            }
+            .check-list {
+                max-height: 220px;
+                overflow-y: auto;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 0.5rem;
+                background: var(--surface2);
+            }
+            .check-list label {
+                display: flex;
+                align-items: center;
+                gap: 0.55rem;
+                padding: 0.45rem 0.5rem;
+                border-radius: 8px;
+                font-size: 0.85rem;
+                cursor: pointer;
+            }
+            .check-list label:hover {
+                background: var(--accent-soft);
+            }
+            .check-list .session-meta {
+                color: var(--muted);
+                font-size: 0.78rem;
+            }
+            .list-actions {
+                display: flex;
+                gap: 0.5rem;
+                margin-bottom: 0.5rem;
+                flex-wrap: wrap;
+            }
+            .preview-panel {
+                min-height: 400px;
+            }
+            .preview-toolbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                margin-bottom: 1rem;
+                flex-wrap: wrap;
+            }
+            .preview-stats {
+                display: flex;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+            }
+            .stat-pill {
+                background: var(--surface2);
+                border: 1px solid var(--border);
+                border-radius: 999px;
+                padding: 0.35rem 0.75rem;
+                font-size: 0.8rem;
+                color: var(--text-secondary);
+            }
+            .stat-pill strong { color: var(--text); }
+            .preview-table-wrap {
+                overflow-x: auto;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+            }
+            .preview-table-wrap table {
+                min-width: 100%;
+            }
+            .preview-table-wrap th,
+            .preview-table-wrap td {
+                white-space: nowrap;
+                font-size: 0.82rem;
+            }
+            .preview-table-wrap th.sticky-col,
+            .preview-table-wrap td.sticky-col {
+                position: sticky;
+                left: 0;
+                background: var(--surface);
+                z-index: 1;
+                box-shadow: 2px 0 4px rgba(15, 23, 42, 0.04);
+            }
+            .cell-present { color: var(--green); font-weight: 600; }
+            .cell-absent { color: var(--red); font-weight: 600; }
+            .empty-preview {
+                text-align: center;
+                padding: 3rem 1rem;
+                color: var(--muted);
+            }
+            .toast-container {
+                position: fixed;
+                bottom: 1.5rem;
+                right: 1.5rem;
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .toast {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 0.75rem 1rem;
+                box-shadow: var(--shadow-md);
+                font-size: 0.88rem;
+                animation: slideIn 0.2s ease;
+            }
+            .toast.success { border-color: var(--green); color: var(--green); }
+            .toast.error { border-color: var(--red); color: var(--red); }
+            @keyframes slideIn {
+                from { transform: translateY(8px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        </style>
+    </head>
+    <body class="dashboard-app teacher-app">
+        <nav>
+            <a href="/teacher/" class="nav-brand" style="text-decoration:none;color:inherit">
+                <div class="nav-brand-icon">📋</div>
+                PrésenceQR
+            </a>
+            <div class="nav-right">
+                <a href="/teacher/" class="btn outline sm" style="text-decoration:none">← Retour</a>
+                <div class="user-pill">
+                    <div class="user-avatar" id="avatarInitials">?</div>
+                    <span id="navUserName">Chargement…</span>
+                    <span class="badge badge-teacher">Enseignant</span>
+                </div>
+                <button class="btn-icon" onclick="API.logout()" title="Déconnexion">Déconnexion</button>
+            </div>
+        </nav>
+
+        <main class="export-page">
+            <div class="export-header">
+                <div>
+                    <h1>📊 Export personnalisé</h1>
+                    <p>Sélectionnez une classe, choisissez les séances et les étudiants, puis exportez les présences et absences en Excel.</p>
+                </div>
+                <button class="btn green" id="btnExportExcel" disabled>📥 Exporter Excel</button>
+            </div>
+
+            <div class="export-grid">
+                <aside class="panel">
+                    <h2>⚙️ Paramètres</h2>
+
+                    <div class="panel-section">
+                        <div class="field">
+                            <label for="classeSelect">Classe</label>
+                            <select id="classeSelect">
+                                <option value="">— Choisir une classe —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2 style="font-size:0.88rem;margin-bottom:0.65rem">📅 Séances</h2>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="sessionMode" value="all" checked />
+                                Toutes les séances
+                            </label>
+                            <label>
+                                <input type="radio" name="sessionMode" value="custom" />
+                                Séances personnalisées
+                            </label>
+                        </div>
+                        <div id="sessionListWrap" style="display:none">
+                            <div class="list-actions">
+                                <button type="button" class="btn sm outline" id="btnSelectAllSessions">Tout</button>
+                                <button type="button" class="btn sm outline" id="btnClearSessions">Aucune</button>
+                            </div>
+                            <div class="check-list" id="sessionList">
+                                <p style="padding:0.5rem;color:var(--muted);font-size:0.85rem">Sélectionnez une classe.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2 style="font-size:0.88rem;margin-bottom:0.65rem">👥 Étudiants</h2>
+                        <div class="list-actions">
+                            <button type="button" class="btn sm outline" id="btnSelectAllStudents">Tout</button>
+                            <button type="button" class="btn sm outline" id="btnClearStudents">Aucune</button>
+                        </div>
+                        <div class="check-list" id="studentList">
+                            <p style="padding:0.5rem;color:var(--muted);font-size:0.85rem">Sélectionnez une classe.</p>
+                        </div>
+                    </div>
+
+                    <button class="btn" id="btnPreview" style="width:100%" disabled>🔍 Actualiser l'aperçu</button>
+                </aside>
+
+                <section class="panel preview-panel">
+                    <div class="preview-toolbar">
+                        <h2>📋 Aperçu</h2>
+                        <div class="preview-stats" id="previewStats"></div>
+                    </div>
+                    <div id="previewContent">
+                        <div class="empty-preview">
+                            <div style="font-size:2rem;margin-bottom:0.5rem">📊</div>
+                            <p>Sélectionnez une classe et cliquez sur « Actualiser l'aperçu ».</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <div class="toast-container" id="toastContainer"></div>
+
+        <script src="/api.js"></script>
+        <script>
+            let classes = [];
+            let allSessions = [];
+            let allStudents = [];
+            let previewData = null;
+
+            function esc(s) {
+                if (s == null) return "";
+                return String(s)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
+            }
+
+            function showToast(msg, type = "success") {
+                const container = document.getElementById("toastContainer");
+                const el = document.createElement("div");
+                el.className = `toast ${type}`;
+                el.textContent = msg;
+                container.appendChild(el);
+                setTimeout(() => el.remove(), 3500);
+            }
+
+            function getSessionMode() {
+                return document.querySelector('input[name="sessionMode"]:checked')?.value || "all";
+            }
+
+            function getSelectedSessionIds() {
+                if (getSessionMode() === "all") return [];
+                return [...document.querySelectorAll('#sessionList input[type="checkbox"]:checked')]
+                    .map((el) => el.value);
+            }
+
+            function getSelectedStudentIds() {
+                return [...document.querySelectorAll('#studentList input[type="checkbox"]:checked')]
+                    .map((el) => el.value);
+            }
+
+            function buildQueryParams() {
+                const classeId = document.getElementById("classeSelect").value;
+                const params = new URLSearchParams({ classe_id: classeId });
+                const sessionIds = getSelectedSessionIds();
+                const studentIds = getSelectedStudentIds();
+                if (sessionIds.length) params.set("session_ids", sessionIds.join(","));
+                if (studentIds.length) params.set("student_ids", studentIds.join(","));
+                return params;
+            }
+
+            async function loadClasses() {
+                const response = await API.apiFetch("/classes/");
+                classes = Array.isArray(response) ? response : (response.results || []);
+                const select = document.getElementById("classeSelect");
+                select.innerHTML = '<option value="">— Choisir une classe —</option>';
+                classes.forEach((c) => {
+                    const opt = document.createElement("option");
+                    opt.value = c.id;
+                    opt.textContent = `${c.name} (${c.code || c.academic_year || ""})`;
+                    select.appendChild(opt);
+                });
+            }
+
+            async function loadSessionsForClasse(classeId) {
+                const response = await API.apiFetch(`/sessions/?classe=${classeId}`);
+                allSessions = Array.isArray(response) ? response : (response.results || []);
+                const list = document.getElementById("sessionList");
+                if (!allSessions.length) {
+                    list.innerHTML = '<p style="padding:0.5rem;color:var(--muted);font-size:0.85rem">Aucune séance pour cette classe.</p>';
+                    return;
+                }
+                list.innerHTML = allSessions.map((s) => `
+                    <label>
+                        <input type="checkbox" value="${s.id}" checked />
+                        <span>
+                            ${esc(s.subject)}<br />
+                            <span class="session-meta">${esc(s.date)} · ${esc(String(s.start_time).slice(0,5))}–${esc(String(s.end_time).slice(0,5))}</span>
+                        </span>
+                    </label>
+                `).join("");
+            }
+
+            async function loadStudentsForClasse(classeId) {
+                const response = await API.apiFetch(`/students/?classe=${classeId}`);
+                allStudents = Array.isArray(response) ? response : (response.results || []);
+                const list = document.getElementById("studentList");
+                if (!allStudents.length) {
+                    list.innerHTML = '<p style="padding:0.5rem;color:var(--muted);font-size:0.85rem">Aucun étudiant dans cette classe.</p>';
+                    return;
+                }
+                list.innerHTML = allStudents.map((s) => `
+                    <label>
+                        <input type="checkbox" value="${s.id}" checked />
+                        <span>${esc(s.last_name)} ${esc(s.first_name)} <span class="session-meta">(${esc(s.code_massar)})</span></span>
+                    </label>
+                `).join("");
+            }
+
+            function renderPreview(data) {
+                previewData = data;
+                const stats = document.getElementById("previewStats");
+                stats.innerHTML = `
+                    <span class="stat-pill"><strong>${data.students.length}</strong> étudiants</span>
+                    <span class="stat-pill"><strong>${data.sessions.length}</strong> séances</span>
+                `;
+
+                const sessionHeaders = data.sessions.map((s) =>
+                    `<th title="${esc(s.subject)} · ${esc(s.date)}">${esc(s.subject.slice(0, 12))}${s.subject.length > 12 ? "…" : ""}<br><small style="font-weight:400;color:var(--muted)">${esc(s.date)}</small></th>`
+                ).join("");
+
+                const rows = data.students.map((student) => {
+                    const sid = String(student.id);
+                    const summary = data.matrix[sid]._summary;
+                    const sessionCells = data.sessions.map((session) => {
+                        const cell = data.matrix[sid][String(session.id)];
+                        const cls = cell.present ? "cell-present" : "cell-absent";
+                        const label = cell.present ? "Présent" : "Absent";
+                        const title = cell.validation_time ? `Validé à ${cell.validation_time}` : "";
+                        return `<td class="${cls}" title="${esc(title)}">${label}</td>`;
+                    }).join("");
+                    return `
+                        <tr>
+                            <td class="sticky-col">${esc(student.last_name)} ${esc(student.first_name)}</td>
+                            <td class="sticky-col">${esc(student.code_massar)}</td>
+                            ${sessionCells}
+                            <td><strong>${summary.present_count}</strong></td>
+                            <td><strong>${summary.absent_count}</strong></td>
+                            <td>${summary.rate}%</td>
+                        </tr>
+                    `;
+                }).join("");
+
+                document.getElementById("previewContent").innerHTML = `
+                    <div class="preview-table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="sticky-col">Étudiant</th>
+                                    <th class="sticky-col">Code Massar</th>
+                                    ${sessionHeaders}
+                                    <th>Présences</th>
+                                    <th>Absences</th>
+                                    <th>Taux</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById("btnExportExcel").disabled = false;
+            }
+
+            async function loadPreview() {
+                const classeId = document.getElementById("classeSelect").value;
+                if (!classeId) {
+                    showToast("Choisissez une classe.", "error");
+                    return;
+                }
+                if (getSessionMode() === "custom" && !getSelectedSessionIds().length) {
+                    showToast("Sélectionnez au moins une séance.", "error");
+                    return;
+                }
+                if (!getSelectedStudentIds().length) {
+                    showToast("Sélectionnez au moins un étudiant.", "error");
+                    return;
+                }
+
+                const btn = document.getElementById("btnPreview");
+                btn.disabled = true;
+                btn.textContent = "⏳ Chargement…";
+                try {
+                    const params = buildQueryParams();
+                    const data = await API.apiFetch(`/attendance/custom-export/preview/?${params}`);
+                    renderPreview(data);
+                } catch (e) {
+                    showToast(e.message || "Erreur de chargement", "error");
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = "🔍 Actualiser l'aperçu";
+                }
+            }
+
+            async function exportExcel() {
+                if (!previewData) {
+                    showToast("Actualisez l'aperçu avant d'exporter.", "error");
+                    return;
+                }
+                const btn = document.getElementById("btnExportExcel");
+                btn.disabled = true;
+                btn.textContent = "⏳ Export…";
+                try {
+                    const params = buildQueryParams();
+                    const blob = await API.apiFetch(`/attendance/custom-export/?${params}`);
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `export_personnalise_${previewData.classe.name.replace(/\W+/g, "_")}.xlsx`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast("Fichier Excel téléchargé !", "success");
+                } catch (e) {
+                    showToast(e.message || "Export échoué", "error");
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = "📥 Exporter Excel";
+                }
+            }
+
+            document.getElementById("classeSelect").addEventListener("change", async (e) => {
+                const classeId = e.target.value;
+                document.getElementById("btnPreview").disabled = !classeId;
+                document.getElementById("btnExportExcel").disabled = true;
+                previewData = null;
+                document.getElementById("previewStats").innerHTML = "";
+                document.getElementById("previewContent").innerHTML = `
+                    <div class="empty-preview">
+                        <div style="font-size:2rem;margin-bottom:0.5rem">📊</div>
+                        <p>Sélectionnez les options puis cliquez sur « Actualiser l'aperçu ».</p>
+                    </div>
+                `;
+                if (!classeId) return;
+                await Promise.all([
+                    loadSessionsForClasse(classeId),
+                    loadStudentsForClasse(classeId),
+                ]);
+            });
+
+            document.querySelectorAll('input[name="sessionMode"]').forEach((radio) => {
+                radio.addEventListener("change", () => {
+                    document.getElementById("sessionListWrap").style.display =
+                        getSessionMode() === "custom" ? "block" : "none";
+                });
+            });
+
+            document.getElementById("btnSelectAllSessions").addEventListener("click", () => {
+                document.querySelectorAll('#sessionList input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
+            });
+            document.getElementById("btnClearSessions").addEventListener("click", () => {
+                document.querySelectorAll('#sessionList input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+            });
+            document.getElementById("btnSelectAllStudents").addEventListener("click", () => {
+                document.querySelectorAll('#studentList input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
+            });
+            document.getElementById("btnClearStudents").addEventListener("click", () => {
+                document.querySelectorAll('#studentList input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+            });
+
+            document.getElementById("btnPreview").addEventListener("click", loadPreview);
+            document.getElementById("btnExportExcel").addEventListener("click", exportExcel);
+
+            (async function init() {
+                const user = await API.requireAuth(["teacher"]);
+                document.getElementById("navUserName").textContent = user.full_name || user.email;
+                document.getElementById("avatarInitials").textContent =
+                    (user.first_name?.[0] || user.email?.[0] || "?").toUpperCase();
+                await loadClasses();
+            })();
+        </script>
+    </body>
+</html>

@@ -2,6 +2,8 @@ from django.urls import path
 
 from .views import (
     AllAttendanceListView,
+    CustomExportPreviewView,
+    CustomExportView,
     ExportAttendanceView,
     MyAttendanceListView,
     QrSessionInfoView,
@@ -41,5 +43,15 @@ urlpatterns = [
         "session/<int:session_id>/export/",
         ExportAttendanceView.as_view(),
         name="attendance-export",
+    ),
+    path(
+        "custom-export/preview/",
+        CustomExportPreviewView.as_view(),
+        name="attendance-custom-export-preview",
+    ),
+    path(
+        "custom-export/",
+        CustomExportView.as_view(),
+        name="attendance-custom-export",
     ),
 ]

@@ -41,7 +41,10 @@
             <aside class="sidebar">
                 <div class="sidebar-header">
                     <h2>🏫 Mes classes</h2>
-                    <button class="btn sm outline" type="button" onclick="showLiveDashboard()">📡 En direct</button>
+                    <div style="display:flex;gap:.35rem;flex-wrap:wrap">
+                        <a class="btn sm outline" href="/teacher/export/" style="text-decoration:none">📊 Export</a>
+                        <button class="btn sm outline" type="button" onclick="showLiveDashboard()">📡 En direct</button>
+                    </div>
                 </div>
                 <div class="sidebar-content" id="classesContainer">
                     <div class="sidebar-loading">Chargement des classes…</div>
@@ -778,6 +781,7 @@
             ? `<button class="btn green" id="btnGenQR">🔲 Générer le QR</button>`
             : `<button class="btn green" id="btnGenQR" disabled title="Hors créneau horaire">🔲 Générer le QR</button>`}
         <button class="btn outline" id="btnExport">📥 Exporter Excel</button>
+        <a class="btn outline" href="/teacher/export/" style="text-decoration:none">📊 Export personnalisé</a>
       </div>
     </div>
     ${windowNotice}

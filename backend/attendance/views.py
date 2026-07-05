@@ -4,6 +4,7 @@ from io import BytesIO
 import openpyxl
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
@@ -14,8 +15,9 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from courses.models import Session
+from users.models import Classe, Student
 from users.permissions import IsAdminOrTeacher, IsStudent
-from users.roles import acting_as_teacher
+from users.roles import acting_as_admin, acting_as_teacher
 
 from .models import Attendance, SuspiciousAttempt
 from .serializers import (
@@ -414,5 +416,344 @@ class ExportAttendanceView(APIView):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         logger.info(
             f"Exported attendance for session {session_id} by {request.user.email}"
+        )
+        return response
+
+
+def _parse_id_list(raw: str) -> list[int]:
+    if not raw or not raw.strip():
+        return []
+    return [int(part) for part in raw.split(",") if part.strip().isdigit()]
+
+
+def _teacher_can_access_classe(user, classe) -> bool:
+    if acting_as_admin(user):
+        return True
+    if not acting_as_teacher(user):
+        return False
+    return (
+        Session.objects.filter(classe=classe)
+        .filter(Q(teacher=user) | Q(module__teacher=user))
+        .exists()
+        or classe.semesters.filter(modules__teacher=user).exists()
+    )
+
+
+def _teacher_sessions_for_classe(user, classe, session_ids=None):
+    qs = (
+        Session.objects.select_related("module", "classe", "teacher")
+        .filter(classe=classe)
+        .order_by("-date", "start_time")
+    )
+    if acting_as_teacher(user) and not acting_as_admin(user):
+        qs = qs.filter(Q(teacher=user) | Q(module__teacher=user))
+    if session_ids:
+        qs = qs.filter(pk__in=session_ids)
+    return list(qs)
+
+
+def _build_custom_export_data(user, classe_id, session_ids=None, student_ids=None):
+    try:
+        classe = Classe.objects.get(pk=classe_id)
+    except Classe.DoesNotExist:
+        raise ValueError("Classe introuvable.")
+
+    if not _teacher_can_access_classe(user, classe):
+        raise PermissionError("Accès refusé à cette classe.")
+
+    sessions = _teacher_sessions_for_classe(user, classe, session_ids or None)
+    if not sessions:
+        raise ValueError("Aucune séance trouvée pour cette sélection.")
+
+    students_qs = Student.objects.filter(classe=classe).order_by("last_name", "first_name")
+    if student_ids:
+        students_qs = students_qs.filter(pk__in=student_ids)
+    students = list(students_qs)
+    if not students:
+        raise ValueError("Aucun étudiant trouvé pour cette sélection.")
+
+    session_pks = [s.pk for s in sessions]
+    attendances = Attendance.objects.select_related("student", "session").filter(
+        session_id__in=session_pks,
+        student_id__in=[s.pk for s in students],
+        attendance_status="confirmed",
+    )
+    att_map = {}
+    for att in attendances:
+        att_map[(att.student_id, att.session_id)] = att
+
+    rows = []
+    matrix = {}
+    for student in students:
+        student_key = str(student.pk)
+        matrix[student_key] = {}
+        present_count = 0
+        for session in sessions:
+            att = att_map.get((student.pk, session.pk))
+            present = att is not None
+            if present:
+                present_count += 1
+            local_time = (
+                timezone.localtime(att.validation_time).strftime("%Y-%m-%d %H:%M:%S")
+                if att
+                else None
+            )
+            matrix[student_key][str(session.pk)] = {
+                "present": present,
+                "validation_time": local_time,
+            }
+            rows.append(
+                {
+                    "student_id": student.pk,
+                    "session_id": session.pk,
+                    "first_name": student.first_name,
+                    "last_name": student.last_name,
+                    "code_massar": student.code_massar,
+                    "classe": classe.name,
+                    "subject": session.subject,
+                    "date": str(session.date),
+                    "start_time": str(session.start_time)[:5],
+                    "end_time": str(session.end_time)[:5],
+                    "present": present,
+                    "status_label": "Présent" if present else "Absent",
+                    "validation_time": local_time,
+                }
+            )
+
+        matrix[student_key]["_summary"] = {
+            "present_count": present_count,
+            "absent_count": len(sessions) - present_count,
+            "rate": round((present_count / len(sessions)) * 100, 1) if sessions else 0,
+        }
+
+    return {
+        "classe": {"id": classe.pk, "name": classe.name, "code": classe.code},
+        "sessions": [
+            {
+                "id": s.pk,
+                "subject": s.subject,
+                "date": str(s.date),
+                "start_time": str(s.start_time)[:5],
+                "end_time": str(s.end_time)[:5],
+            }
+            for s in sessions
+        ],
+        "students": [
+            {
+                "id": s.pk,
+                "first_name": s.first_name,
+                "last_name": s.last_name,
+                "code_massar": s.code_massar,
+            }
+            for s in students
+        ],
+        "matrix": matrix,
+        "rows": rows,
+    }
+
+
+def _style_excel_header(ws):
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(
+        start_color="1F4E79", end_color="1F4E79", fill_type="solid"
+    )
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+    return ws
+
+
+def _autosize_columns(ws):
+    for column in ws.columns:
+        max_len = max((len(str(cell.value or "")) for cell in column), default=0)
+        ws.column_dimensions[column[0].column_letter].width = min(max_len + 4, 40)
+
+
+def _build_custom_export_workbook(data):
+    from openpyxl.styles import Font, PatternFill
+
+    wb = openpyxl.Workbook()
+    sessions = data["sessions"]
+    students = data["students"]
+    matrix = data["matrix"]
+
+    ws_summary = wb.active
+    ws_summary.title = "Récapitulatif"
+    summary_headers = [
+        "Prénom",
+        "Nom",
+        "Code Massar",
+        "Classe",
+        *[
+            f"{s['subject']} ({s['date']})"
+            for s in sessions
+        ],
+        "Présences",
+        "Absences",
+        "Taux (%)",
+    ]
+    ws_summary.append(summary_headers)
+    _style_excel_header(ws_summary)
+
+    present_fill = PatternFill(
+        start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"
+    )
+    absent_fill = PatternFill(
+        start_color="FFC7CE", end_color="FFC7CE", fill_type="solid"
+    )
+
+    for student in students:
+        sid = str(student["id"])
+        summary = matrix[sid]["_summary"]
+        row = [
+            student["first_name"],
+            student["last_name"],
+            student["code_massar"],
+            data["classe"]["name"],
+        ]
+        for session in sessions:
+            cell_data = matrix[sid][str(session["id"])]
+            row.append("Présent" if cell_data["present"] else "Absent")
+        row.extend(
+            [
+                summary["present_count"],
+                summary["absent_count"],
+                summary["rate"],
+            ]
+        )
+        ws_summary.append(row)
+        row_idx = ws_summary.max_row
+        for col_idx, session in enumerate(sessions, start=5):
+            cell = ws_summary.cell(row=row_idx, column=col_idx)
+            cell.fill = present_fill if cell.value == "Présent" else absent_fill
+
+    _autosize_columns(ws_summary)
+
+    ws_detail = wb.create_sheet("Détail")
+    detail_headers = [
+        "Prénom",
+        "Nom",
+        "Code Massar",
+        "Classe",
+        "Matière",
+        "Date séance",
+        "Heure début",
+        "Heure fin",
+        "Statut",
+        "Heure validation",
+    ]
+    ws_detail.append(detail_headers)
+    _style_excel_header(ws_detail)
+
+    for row in data["rows"]:
+        ws_detail.append(
+            [
+                row["first_name"],
+                row["last_name"],
+                row["code_massar"],
+                row["classe"],
+                row["subject"],
+                row["date"],
+                row["start_time"],
+                row["end_time"],
+                row["status_label"],
+                row["validation_time"] or "",
+            ]
+        )
+    _autosize_columns(ws_detail)
+
+    ws_info = wb.create_sheet("Informations")
+    ws_info.append(["Classe", data["classe"]["name"]])
+    ws_info.append(["Code classe", data["classe"]["code"]])
+    ws_info.append(["Nombre d'étudiants", len(students)])
+    ws_info.append(["Nombre de séances", len(sessions)])
+    ws_info.append(["Export généré le", timezone.localtime().strftime("%Y-%m-%d %H:%M:%S")])
+    for cell in ws_info["A"]:
+        cell.font = Font(bold=True)
+    _autosize_columns(ws_info)
+
+    return wb
+
+
+class CustomExportPreviewView(APIView):
+    """Preview personalized attendance report for a class."""
+
+    permission_classes = [IsAuthenticated, IsAdminOrTeacher]
+
+    def get(self, request):
+        classe_id = request.query_params.get("classe_id")
+        if not classe_id:
+            return Response(
+                {"error": "classe_id requis."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        session_ids = _parse_id_list(request.query_params.get("session_ids", ""))
+        student_ids = _parse_id_list(request.query_params.get("student_ids", ""))
+
+        try:
+            data = _build_custom_export_data(
+                request.user,
+                int(classe_id),
+                session_ids=session_ids or None,
+                student_ids=student_ids or None,
+            )
+        except PermissionError as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data)
+
+
+class CustomExportView(APIView):
+    """Export personalized attendance report to Excel."""
+
+    permission_classes = [IsAuthenticated, IsAdminOrTeacher]
+
+    def get(self, request):
+        classe_id = request.query_params.get("classe_id")
+        if not classe_id:
+            return Response(
+                {"error": "classe_id requis."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        session_ids = _parse_id_list(request.query_params.get("session_ids", ""))
+        student_ids = _parse_id_list(request.query_params.get("student_ids", ""))
+
+        try:
+            data = _build_custom_export_data(
+                request.user,
+                int(classe_id),
+                session_ids=session_ids or None,
+                student_ids=student_ids or None,
+            )
+        except PermissionError as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        wb = _build_custom_export_workbook(data)
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        safe_name = "".join(
+            c if c.isalnum() else "_" for c in data["classe"]["name"]
+        )[:30]
+        filename = f"export_personnalise_{safe_name}_{timezone.localdate()}.xlsx"
+        response = HttpResponse(
+            buffer.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        logger.info(
+            "Custom export for classe %s by %s (%s students, %s sessions)",
+            classe_id,
+            request.user.email,
+            len(data["students"]),
+            len(data["sessions"]),
         )
         return response
