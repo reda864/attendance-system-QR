@@ -12,10 +12,8 @@ class SessionSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.full_name", read_only=True)
     classe_name = serializers.CharField(source="classe.name", read_only=True)
     classe_field = serializers.CharField(source="classe.field", read_only=True)
-    module_name = serializers.CharField(source="module.name", read_only=True)
-    semester_code = serializers.CharField(
-        source="module.semester.code", read_only=True
-    )
+    module_name = serializers.SerializerMethodField()
+    semester_code = serializers.SerializerMethodField()
     is_qr_valid = serializers.BooleanField(read_only=True)
     is_within_session_window = serializers.BooleanField(read_only=True)
     can_generate_qr = serializers.BooleanField(read_only=True)
@@ -76,6 +74,12 @@ class SessionSerializer(serializers.ModelSerializer):
             "can_generate_qr",
             "created_at",
         ]
+
+    def get_module_name(self, obj):
+        return obj.module.name if obj.module else None
+
+    def get_semester_code(self, obj):
+        return obj.module.semester.code if obj.module and obj.module.semester else None
 
     def validate(self, data):
         start_time = data.get("start_time", getattr(self.instance, "start_time", None))
