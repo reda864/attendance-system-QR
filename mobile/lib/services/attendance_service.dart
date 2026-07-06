@@ -5,6 +5,8 @@ import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../constants/app_constants.dart';
 import '../models/auth_model.dart';
@@ -16,8 +18,8 @@ class AttendanceService {
   final DeviceInfoPlugin _deviceInfo;
 
   AttendanceService({DioClient? client, DeviceInfoPlugin? deviceInfo})
-      : _client = client ?? DioClient(),
-        _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
+    : _client = client ?? DioClient(),
+      _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
 
   Future<AttendanceResult> validateAttendance(
     ValidateAttendanceRequest request, {
@@ -93,9 +95,8 @@ class AttendanceService {
       final data = _responseBodyAsMap(response.data);
       String message = 'La validation de la présence a échoué.';
       if (data != null) {
-        message = data['error']?.toString() ??
-            data['detail']?.toString() ??
-            message;
+        message =
+            data['error']?.toString() ?? data['detail']?.toString() ?? message;
       }
       return AttendanceResult.failure(message: message);
     } on NetworkException {
@@ -149,10 +150,7 @@ class AttendanceService {
     try {
       final response = await _client.get(
         AppConstants.myAttendanceEndpoint,
-        queryParameters: {
-          'page': page,
-          'page_size': pageSize,
-        },
+        queryParameters: {'page': page, 'page_size': pageSize},
       );
 
       final statusCode = response.statusCode ?? 0;
@@ -176,7 +174,7 @@ class AttendanceService {
   }
 
   Future<({String deviceId, String deviceInfo, String fingerprint})>
-      getDeviceMetadata() async {
+  getDeviceMetadata() async {
     final deviceId = await _getDeviceId();
     final deviceInfo = await _getDeviceInfo();
     final fingerprint = _computeFingerprint(deviceId, deviceInfo);
@@ -200,16 +198,13 @@ class AttendanceService {
   }
 
   Future<String> _getDeviceId() async {
-    try {
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        final info = await _deviceInfo.androidInfo;
-        return info.id;
-      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-        final info = await _deviceInfo.iosInfo;
-        return info.identifierForVendor ?? '';
-      }
-    } catch (_) {}
-    return '';
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getString(AppConstants.deviceInstallIdKey);
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    final generated = 'install_${const Uuid().v4()}';
+    await prefs.setString(AppConstants.deviceInstallIdKey, generated);
+    return generated;
   }
 
   Future<String> _getDeviceInfo() async {

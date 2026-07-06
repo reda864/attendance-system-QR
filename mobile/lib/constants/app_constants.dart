@@ -26,7 +26,9 @@ class AppConstants {
   static String get baseUrl {
     final override = _apiBaseUrlOverride.trim();
     if (override.isNotEmpty) {
-      return override.endsWith('/') ? override.substring(0, override.length - 1) : override;
+      return override.endsWith('/')
+          ? override.substring(0, override.length - 1)
+          : override;
     }
     if (kIsWeb) return 'http://localhost:$apiPort/api/v1';
     // Real phones cannot use localhost or 10.0.2.2 — use your PC's LAN IP.
@@ -38,7 +40,8 @@ class AppConstants {
   static const String refreshEndpoint = '/auth/refresh/';
   static const String meEndpoint = '/auth/me/';
   static const String validateAttendanceEndpoint = '/attendance/validate/';
-  static const String validateAppAttendanceEndpoint = '/attendance/validate/app/';
+  static const String validateAppAttendanceEndpoint =
+      '/attendance/validate/app/';
   static const String myAttendanceEndpoint = '/attendance/my/';
   static const String appDeepLinkScheme = 'presenceqr';
 
@@ -47,6 +50,7 @@ class AppConstants {
   static const String refreshTokenKey = 'refresh_token';
   static const String userDataKey = 'user_data';
   static const String themeKey = 'theme_mode';
+  static const String deviceInstallIdKey = 'device_install_id';
 
   // ─── HTTP timeouts (ms) ───────────────────────────────────────────────────
   // Render free tier can cold-start 30–60s; local Wi‑Fi may be slow too.

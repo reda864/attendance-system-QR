@@ -71,9 +71,7 @@ class AttendanceService:
         radius = session.attendance_radius_meters or 50
 
         if distance > radius:
-            raise ValueError(
-                "Vous êtes en dehors de la zone de présence autorisée."
-            )
+            raise ValueError("Vous êtes en dehors de la zone de présence autorisée.")
 
     @staticmethod
     def _check_duplicate_device(
@@ -82,25 +80,24 @@ class AttendanceService:
         device_id: str,
         device_fingerprint: str,
     ) -> None:
-        if ip_address and Attendance.objects.filter(
-            session=session, ip_address=ip_address
-        ).exists():
+        # Do not block by IP address alone: many students can share the same
+        # public IP when they are on the same Wi-Fi/mobile NAT.
+        if (
+            device_id
+            and Attendance.objects.filter(session=session, device_id=device_id).exists()
+        ):
             raise ValueError(
                 "Cet appareil a déjà été utilisé pour marquer la présence "
                 "pour cette séance."
             )
 
-        if device_id and Attendance.objects.filter(
-            session=session, device_id=device_id
-        ).exists():
-            raise ValueError(
-                "Cet appareil a déjà été utilisé pour marquer la présence "
-                "pour cette séance."
-            )
-
-        if device_fingerprint and Attendance.objects.filter(
-            session=session, device_fingerprint=device_fingerprint
-        ).exists():
+        if (
+            not device_id
+            and device_fingerprint
+            and Attendance.objects.filter(
+                session=session, device_fingerprint=device_fingerprint
+            ).exists()
+        ):
             raise ValueError(
                 "Cet appareil a déjà été utilisé pour marquer la présence "
                 "pour cette séance."
@@ -120,9 +117,9 @@ class AttendanceService:
         longitude=None,
         user_agent: str = "",
     ) -> Tuple[Attendance, Session]:
-        fingerprint = device_fingerprint or compute_device_fingerprint(
-            device_id, ip_address or "", user_agent, device_info
-        )
+        fingerprint = device_fingerprint
+        if not fingerprint and device_id:
+            fingerprint = compute_device_fingerprint(device_id, "", "", device_info)
 
         try:
             session = Session.objects.select_related("teacher", "classe").get(
@@ -224,9 +221,7 @@ class AttendanceService:
                 latitude=latitude,
                 longitude=longitude,
             )
-            raise ValueError(
-                "Vous n'appartenez pas à la classe de cette séance."
-            )
+            raise ValueError("Vous n'appartenez pas à la classe de cette séance.")
 
         name_matches = (
             student.first_name.strip().lower() == first_name.strip().lower()
@@ -269,9 +264,7 @@ class AttendanceService:
                 latitude=latitude,
                 longitude=longitude,
             )
-            raise ValueError(
-                "Présence déjà enregistrée pour cette séance."
-            )
+            raise ValueError("Présence déjà enregistrée pour cette séance.")
 
         try:
             AttendanceService._check_duplicate_device(
@@ -356,9 +349,7 @@ class AttendanceService:
         try:
             student = Student.objects.select_related("classe").get(user=user)
         except Student.DoesNotExist:
-            raise ValueError(
-                "Profil étudiant introuvable. Contactez votre enseignant."
-            )
+            raise ValueError("Profil étudiant introuvable. Contactez votre enseignant.")
 
         return AttendanceService.validate_attendance(
             qr_token=qr_token,
