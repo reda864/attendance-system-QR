@@ -73,9 +73,13 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.full_name
 
     def get_assigned_class_ids(self, obj):
+        if "assigned_classes" in getattr(obj, "_prefetched_objects_cache", {}):
+            return [classe.pk for classe in obj.assigned_classes.all()]
         return obj.get_assigned_class_ids()
 
     def get_teaching_module_ids(self, obj):
+        if "teaching_modules" in getattr(obj, "_prefetched_objects_cache", {}):
+            return [module.pk for module in obj.teaching_modules.all()]
         return obj.get_teaching_module_ids()
 
     def get_student_profile(self, obj):

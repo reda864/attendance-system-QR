@@ -101,8 +101,13 @@ class TokenRefreshView(TokenRefreshView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.order_by("-created_at")
+    queryset = (
+        User.objects.select_related("student_profile__classe")
+        .prefetch_related("assigned_classes", "teaching_modules")
+        .order_by("-created_at")
+    )
     permission_classes = [IsAuthenticated, IsAdmin]
+    lookup_value_regex = r"\d+"
 
     def get_serializer_class(self) -> Type[BaseSerializer]:
         if self.action == "create":
