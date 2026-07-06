@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="module",
             field=models.ForeignKey(
                 blank=True,
-                db_column="class_module_id",
+                db_column="module_id",
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="sessions",

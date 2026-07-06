@@ -45,7 +45,6 @@ class Session(models.Model):
         null=True,
         blank=True,
         verbose_name="Module",
-        db_column="class_module_id",
     )
 
     class Meta:
