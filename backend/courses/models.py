@@ -30,6 +30,7 @@ class Session(models.Model):
     qr_session_id = models.CharField(max_length=64, blank=True, default="")
     qr_expires_at = models.DateTimeField(null=True, blank=True)
     attendance_radius_meters = models.PositiveIntegerField(default=50)
+    session_type = models.CharField(max_length=40, default="course")
     location_latitude = models.DecimalField(
         max_digits=10, decimal_places=7, null=True, blank=True
     )

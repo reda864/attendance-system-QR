@@ -2,6 +2,7 @@ import logging
 from typing import Type, cast
 
 from django.db.models import Q
+from django.db.models.deletion import ProtectedError
 from django.http import FileResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -133,6 +134,7 @@ class ClasseViewSet(viewsets.ModelViewSet):
     queryset = Classe.objects.all().order_by("name", "academic_year")
     serializer_class = ClasseSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
+    lookup_value_regex = r"\d+"
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
@@ -147,6 +149,20 @@ class ClasseViewSet(viewsets.ModelViewSet):
                 Q(semesters__modules__teacher=user) | Q(sessions__teacher=user)
             ).distinct()
         return qs
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {
+                    "error": (
+                        "Impossible de supprimer cette classe car elle contient "
+                        "encore des étudiants ou des données associées."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class SemesterViewSet(viewsets.ModelViewSet):
