@@ -388,11 +388,29 @@
         <div class="field"><label>Nom</label><input type="text" id="clName" placeholder="Sciences des Données et IA" /></div>
         <div class="field"><label>Code</label><input type="text" id="clCode" placeholder="SDIA" /></div>
       </div>
-      <div class="field-row">
-        <div class="field"><label>Niveau</label><input type="text" id="clLevel" placeholder="Licence" /></div>
-        <div class="field"><label>Filière</label><input type="text" id="clField" placeholder="Informatique" /></div>
+      <div class="field">
+        <label>Niveau</label>
+        <div style="display:flex;gap:1.25rem;flex-wrap:wrap;margin-top:.35rem">
+          <label class="checkbox-label"><input type="radio" name="clLevel" value="Licence" checked /> Licence</label>
+          <label class="checkbox-label"><input type="radio" name="clLevel" value="Licence d'excellence" /> Licence d'excellence</label>
+        </div>
       </div>
-      <div class="field"><label>Année universitaire</label><input type="text" id="clYear" placeholder="2025-2026" /></div>
+      <div class="field-row">
+        <div class="field">
+          <label>Filière</label>
+          <select id="clField">
+            <option value="Informatique">Informatique</option>
+            <option value="SMI">SMI</option>
+            <option value="__other__">Autre…</option>
+          </select>
+          <input type="text" id="clFieldOther" placeholder="Nom de la filière" style="display:none;margin-top:.5rem" />
+        </div>
+        <div class="field">
+          <label>Année universitaire</label>
+          <select id="clYear"></select>
+          <input type="text" id="clYearOther" placeholder="ex. 2028-2029" style="display:none;margin-top:.5rem" />
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn outline" data-close="modalClasse">Annuler</button>
@@ -1181,10 +1199,83 @@
     } catch (e) { showToast(e.message, 'error'); }
   });
 
+  /* ── Classe form: niveau (radio), filière & année universitaire (select + « Autre ») ── */
+  const CLASSE_FIELD_OPTIONS = ['Informatique', 'SMI'];
+  const CLASSE_DEFAULT_YEAR = '2025-2026';
+
+  function academicYearOptions() {
+    const startYear = 2024;
+    const years = [];
+    for (let i = 0; i < 5; i++) {
+      const y = startYear + i;
+      years.push(`${y}-${y + 1}`);
+    }
+    return years;
+  }
+
+  function populateClasseYearSelect(selected) {
+    const select = document.getElementById('clYear');
+    const years = academicYearOptions();
+    const value = selected || CLASSE_DEFAULT_YEAR;
+    const isKnown = years.includes(value);
+    select.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('')
+      + '<option value="__other__">Autre…</option>';
+    select.value = isKnown ? value : '__other__';
+    document.getElementById('clYearOther').style.display = isKnown ? 'none' : 'block';
+    document.getElementById('clYearOther').value = isKnown ? '' : value;
+  }
+
+  function setClasseFieldValue(value) {
+    const select = document.getElementById('clField');
+    const isKnown = CLASSE_FIELD_OPTIONS.includes(value);
+    select.value = isKnown || !value ? (value || CLASSE_FIELD_OPTIONS[0]) : '__other__';
+    document.getElementById('clFieldOther').style.display = isKnown || !value ? 'none' : 'block';
+    document.getElementById('clFieldOther').value = isKnown || !value ? '' : value;
+  }
+
+  function setClasseLevelValue(value) {
+    const radios = document.querySelectorAll('input[name="clLevel"]');
+    let matched = false;
+    radios.forEach(r => {
+      r.checked = r.value === value;
+      if (r.checked) matched = true;
+    });
+    if (!matched) radios[0].checked = true;
+  }
+
+  function getClasseLevelValue() {
+    const checked = document.querySelector('input[name="clLevel"]:checked');
+    return checked ? checked.value : '';
+  }
+
+  function getClasseFieldValue() {
+    const select = document.getElementById('clField');
+    return select.value === '__other__'
+      ? document.getElementById('clFieldOther').value.trim()
+      : select.value;
+  }
+
+  function getClasseYearValue() {
+    const select = document.getElementById('clYear');
+    return select.value === '__other__'
+      ? document.getElementById('clYearOther').value.trim()
+      : select.value;
+  }
+
+  document.getElementById('clField').addEventListener('change', (e) => {
+    document.getElementById('clFieldOther').style.display = e.target.value === '__other__' ? 'block' : 'none';
+  });
+  document.getElementById('clYear').addEventListener('change', (e) => {
+    document.getElementById('clYearOther').style.display = e.target.value === '__other__' ? 'block' : 'none';
+  });
+
   document.getElementById('btnOpenAddClasse').addEventListener('click', () => {
     document.getElementById('clId').value = '';
     document.getElementById('modalClasseTitle').textContent = 'Nouvelle classe';
-    ['clName','clCode','clLevel','clField','clYear'].forEach(id => document.getElementById(id).value = '');
+    ['clName','clCode'].forEach(id => document.getElementById(id).value = '');
+    setClasseLevelValue('Licence');
+    setClasseFieldValue('');
+    populateClasseYearSelect(CLASSE_DEFAULT_YEAR);
     openModal('modalClasse');
   });
 
@@ -1195,9 +1286,9 @@
     document.getElementById('modalClasseTitle').textContent = 'Modifier la classe';
     document.getElementById('clName').value = c.name;
     document.getElementById('clCode').value = c.code || '';
-    document.getElementById('clLevel').value = c.level || '';
-    document.getElementById('clField').value = c.field || '';
-    document.getElementById('clYear').value = c.academic_year || '';
+    setClasseLevelValue(c.level || 'Licence');
+    setClasseFieldValue(c.field || '');
+    populateClasseYearSelect(c.academic_year || '');
     openModal('modalClasse');
   }
 
@@ -1206,12 +1297,18 @@
     const body = {
       name: document.getElementById('clName').value.trim(),
       code: document.getElementById('clCode').value.trim(),
-      level: document.getElementById('clLevel').value.trim(),
-      field: document.getElementById('clField').value.trim(),
-      academic_year: document.getElementById('clYear').value.trim(),
+      level: getClasseLevelValue(),
+      field: getClasseFieldValue(),
+      academic_year: getClasseYearValue(),
     };
     if (!body.name) {
       showToast('Le nom de la classe est obligatoire.', 'error'); return;
+    }
+    if (!body.field) {
+      showToast('La filière est obligatoire.', 'error'); return;
+    }
+    if (!body.academic_year) {
+      showToast("L'année universitaire est obligatoire.", 'error'); return;
     }
     try {
       if (id) {
