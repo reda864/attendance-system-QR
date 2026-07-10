@@ -133,6 +133,28 @@ class UserViewSet(viewsets.ModelViewSet):
         user.save(update_fields=["is_active"])
         return Response(UserSerializer(user).data)
 
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        if user == request.user:
+            return Response(
+                {"error": "Vous ne pouvez pas supprimer votre propre compte."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {
+                    "error": (
+                        "Impossible de supprimer cet utilisateur car il est "
+                        "assigné comme enseignant à un ou plusieurs modules, ou "
+                        "référencé par d'autres données. Désactivez-le à la place, "
+                        "ou réassignez d'abord ses modules."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
 
 class ClasseViewSet(viewsets.ModelViewSet):
     queryset = Classe.objects.all().order_by("name", "academic_year")
