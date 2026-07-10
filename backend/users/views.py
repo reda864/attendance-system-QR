@@ -28,6 +28,7 @@ from .serializers import (
     UserUpdateSerializer,
 )
 from .student_import import build_import_template, import_students_from_excel
+from .throttles import LoginRateThrottle, TokenRefreshRateThrottle
 from .tokens import AppRefreshToken
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ def _auth_response(user: User, active_role: str | None = None) -> dict:
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -70,6 +72,8 @@ class SwitchRoleView(APIView):
 
 class TokenRefreshView(TokenRefreshView):
     """Preserves custom JWT claims (active_role) when refreshing tokens."""
+
+    throttle_classes = [TokenRefreshRateThrottle]
 
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)

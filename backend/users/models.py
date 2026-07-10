@@ -41,6 +41,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    grade = models.CharField(max_length=100, blank=True, default="")
+    phone = models.CharField(max_length=30, blank=True, default="")
+    speciality = models.CharField(max_length=100, blank=True, default="")
     assigned_classes = models.ManyToManyField(
         "Classe",
         blank=True,

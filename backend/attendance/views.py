@@ -64,6 +64,13 @@ class ValidateAttendanceThrottle(ScopedRateThrottle):
     scope = "validate_attendance"
 
 
+class QrInfoRateThrottle(ScopedRateThrottle):
+    """Dedicated per-IP quota for QR info checks, isolated from other
+    anonymous traffic (e.g. login) sharing the same public IP."""
+
+    scope = "qr_info"
+
+
 class ValidateAttendanceView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [ValidateAttendanceThrottle]
@@ -140,6 +147,7 @@ class QrSessionInfoView(APIView):
     """Public endpoint to verify QR token validity before showing the web form."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [QrInfoRateThrottle]
 
     def get(self, request):
         token = request.query_params.get("token", "").strip()

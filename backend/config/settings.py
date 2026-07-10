@@ -121,6 +121,13 @@ REST_FRAMEWORK = {
         "user": "120/minute",
         # Custom scope used on the validate-attendance endpoint
         "validate_attendance": "10/minute",
+        # Dedicated scopes below prevent heavy anonymous traffic (e.g. many
+        # students scanning QR codes from the same school Wi-Fi/NAT IP) from
+        # exhausting the shared "anon" quota and blocking login/refresh from
+        # that same IP.
+        "login": "30/minute",
+        "token_refresh": "60/minute",
+        "qr_info": "120/minute",
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 1000,
